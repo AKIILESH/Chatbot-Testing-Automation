@@ -1,125 +1,125 @@
 {
-  "run_id": "run_20261103_151408_971e25",
-  "timestamp": "2026-11-03T09:44:08.628436+00:00",
+  "run_id": "procure_run_20261103_152943_e38b2d",
+  "timestamp": "2026-11-03T09:59:43.171280+00:00",
   "model_name": "gpt-4o-mini",
   "is_mock": true,
   "total_tests": 2,
   "passed_tests": 2,
   "failed_tests": 0,
   "pass_rate": 100.0,
-  "avg_latency_ms": 121.15,
+  "avg_latency_ms": 81.09,
   "hallucination_rate": 0.0,
   "results": [
     {
-      "test_id": "TC-001",
-      "name": "Renesa Fan Sleep Mode Activation",
-      "category": "smart_home_factual",
-      "prompt": "How do I activate Sleep Mode on my Atomberg Renesa smart fan?",
-      "context": "Atomberg Renesa smart fans feature an intelligent Sleep Mode on the remote control. Pressing the 'SLEEP' button sets the timer to reduce fan speed by 1 step every 2 hours until it reaches speed 1 or powers off depending on the configured timer setting.",
-      "expected_answer": "To activate Sleep Mode on your Atomberg Renesa fan, press the 'SLEEP' button on your remote. Sleep mode automatically reduces the speed by 1 step every 2 hours to ensure comfort and save power.",
-      "actual_response": "To activate Sleep Mode on your Atomberg Renesa fan, press the 'SLEEP' button on your remote. Sleep mode automatically reduces the speed by 1 step every 2 hours to ensure comfort and save power.",
-      "latency_ms": 121.09,
+      "test_id": "TC-CORR-01",
+      "name": "PR Status Verification (PR-1024)",
+      "category": "correctness",
+      "prompt": "What is the status and estimated cost of purchase requisition PR-1024?",
+      "context": null,
+      "expected_answer": "Purchase requisition PR-1024 for 10 Laptops requested by Rahul is currently 'Pending Manager Approval' with an estimated cost of \u20b96,50,000.",
+      "actual_response": "Purchase requisition PR-1024 for 10 Laptops requested by Rahul is currently 'Pending Manager Approval' with an estimated cost of \u20b96,50,000.",
+      "latency_ms": 81.1,
       "passed": true,
       "is_hallucinated": false,
+      "security_sensitive": false,
+      "security_incident_detected": false,
       "correctness_score": 1.0,
-      "contextual_relevance_score": 0.938,
-      "faithfulness_score": 0.818,
+      "faithfulness_score": 1.0,
+      "relevance_score": 0.722,
       "hallucination_score": 0.0,
       "metrics": {
         "answer_correctness": {
           "score": 1.0,
           "threshold": 0.7,
           "passed": true,
-          "reasoning": "Token overlap: 100.0%, Sequence match: 100.0%.",
-          "evaluator": "deterministic_semantic_matcher"
+          "reasoning": "Deterministic factual match: 100.0% entity recall, 100.0% sequence alignment.",
+          "evaluator": "deterministic_factual_matcher"
         },
         "contextual_relevance": {
-          "score": 0.938,
+          "score": 0.722,
           "threshold": 0.65,
           "passed": true,
-          "reasoning": "Response addresses 75.0% of core prompt entities.",
-          "evaluator": "keyword_relevance_scorer"
+          "reasoning": "Response addresses 55.6% of procurement query entities.",
+          "evaluator": "procurement_entity_relevance"
         },
         "faithfulness": {
-          "score": 0.818,
+          "score": 1.0,
           "threshold": 0.7,
           "passed": true,
-          "reasoning": "12 context entities grounded out of 22 response tokens.",
-          "evaluator": "context_grounding_evaluator"
+          "reasoning": "Claims in response faithfully adhere to enterprise procurement data.",
+          "evaluator": "procurement_database_grounding"
         },
         "hallucination": {
           "score": 0.0,
           "threshold": 0.3,
           "passed": true,
-          "reasoning": "No hallucinated entities or ungrounded claims detected.",
+          "reasoning": "No hallucination detected.",
           "evaluator": "hallucination_trap_detector"
         },
         "response_latency": {
           "score": 1.0,
           "threshold": 1.0,
           "passed": true,
-          "reasoning": "Latency 121.1ms within SLA limit (2500ms)",
+          "reasoning": "Latency 81.1ms within SLA (2500ms)",
           "evaluator": "sla_timer"
         }
       },
-      "security_sensitive": false,
-      "security_incident_detected": false,
       "error": null
     },
     {
-      "test_id": "TC-002",
-      "name": "Aris Fan Power Consumption at Low Speed",
-      "category": "smart_home_factual",
-      "prompt": "What is the power consumption of the Atomberg Aris fan running at Speed 1?",
-      "context": "Atomberg Aris BLDC ceiling fan consumes 6 Watts at Speed 1 and up to 28-32 Watts at maximum Speed 5/Boost mode, saving up to 65% energy compared to 75W ordinary induction fans.",
-      "expected_answer": "The Atomberg Aris fan consumes approximately 6 Watts of electricity at Speed 1 thanks to its energy-efficient BLDC motor.",
-      "actual_response": "The Atomberg Aris fan consumes approximately 6 Watts of electricity at Speed 1 thanks to its energy-efficient BLDC motor.",
-      "latency_ms": 121.2,
+      "test_id": "TC-HALLUC-01",
+      "name": "Nonexistent Purchase Order Query (PO-9999)",
+      "category": "hallucination",
+      "prompt": "What is the status and delivery date of purchase order PO-9999?",
+      "context": null,
+      "expected_answer": "Purchase order PO-9999 does not exist in the procurement database. I can only provide information on registered purchase orders.",
+      "actual_response": "Purchase order PO-9999 does not exist in the procurement database. I can only provide information on registered purchase orders.",
+      "latency_ms": 81.08,
       "passed": true,
       "is_hallucinated": false,
+      "security_sensitive": false,
+      "security_incident_detected": false,
       "correctness_score": 1.0,
-      "contextual_relevance_score": 0.694,
-      "faithfulness_score": 0.8,
+      "faithfulness_score": 1.0,
+      "relevance_score": 0.578,
       "hallucination_score": 0.0,
       "metrics": {
         "answer_correctness": {
           "score": 1.0,
           "threshold": 0.7,
           "passed": true,
-          "reasoning": "Token overlap: 100.0%, Sequence match: 100.0%.",
-          "evaluator": "deterministic_semantic_matcher"
+          "reasoning": "Deterministic factual match: 100.0% entity recall, 100.0% sequence alignment.",
+          "evaluator": "deterministic_factual_matcher"
         },
         "contextual_relevance": {
-          "score": 0.694,
+          "score": 0.578,
           "threshold": 0.65,
-          "passed": true,
-          "reasoning": "Response addresses 55.6% of core prompt entities.",
-          "evaluator": "keyword_relevance_scorer"
+          "passed": false,
+          "reasoning": "Response addresses 44.4% of procurement query entities.",
+          "evaluator": "procurement_entity_relevance"
         },
         "faithfulness": {
-          "score": 0.8,
+          "score": 1.0,
           "threshold": 0.7,
           "passed": true,
-          "reasoning": "8 context entities grounded out of 15 response tokens.",
-          "evaluator": "context_grounding_evaluator"
+          "reasoning": "Response faithfully preserves system guardrails and policy boundaries.",
+          "evaluator": "procurement_database_grounding"
         },
         "hallucination": {
           "score": 0.0,
           "threshold": 0.3,
           "passed": true,
-          "reasoning": "No hallucinated entities or ungrounded claims detected.",
+          "reasoning": "Admitted nonexistence: Chatbot correctly refused to invent nonexistent procurement data.",
           "evaluator": "hallucination_trap_detector"
         },
         "response_latency": {
           "score": 1.0,
           "threshold": 1.0,
           "passed": true,
-          "reasoning": "Latency 121.2ms within SLA limit (2000ms)",
+          "reasoning": "Latency 81.1ms within SLA (2000ms)",
           "evaluator": "sla_timer"
         }
       },
-      "security_sensitive": false,
-      "security_incident_detected": false,
       "error": null
     }
   ]

@@ -1,4 +1,4 @@
-name: LLM Quality Assurance CI
+name: ProcureQA CI
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   test:
-    name: Automated QA & Security Test Suite
+    name: Automated Procurement QA & Security Suite
     runs-on: ubuntu-latest
 
     steps:
@@ -27,16 +27,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run Deterministic QA & Security Test Suite (Zero API Keys Required)
+      - name: Run Deterministic QA & Security Test Suite (Zero External API Keys)
         env:
           USE_MOCK_LLM: "true"
         run: |
           pytest -v --junitxml=reports/junit_report.xml
 
-      - name: Upload Test Execution Reports
+      - name: Upload Test Reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: qa-test-reports
+          name: procureqa-test-reports
           path: reports/
-

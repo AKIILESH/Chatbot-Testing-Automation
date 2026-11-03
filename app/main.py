@@ -3,22 +3,24 @@ from typing import List, Optional
 from fastapi import FastAPI, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
 from app.schemas import (
-    TestCase,
+    ChatRequest,
+    ChatResponse,
+    PurchaseRequisitionItem,
+    PurchaseOrderItem,
     TestSuiteRun,
-    RegressionReport,
     RunTestsRequest,
     HealthResponse,
 )
+from app.procurement_data import procurement_store
+from app.chatbot import ProcurementChatbot
 from app.test_runner import TestRunner
-from app.regression import RegressionDetector
 
 app = FastAPI(
-    title="LLM Quality Tester API",
-    description="Automated AI Quality Engineering platform for evaluation, security, hallucination detection, and regression testing.",
+    title="ProcureQA API — Enterprise Procurement Chatbot & Test Automation",
+    description="Automated LLM test automation framework evaluating correctness, hallucinations, security guardrails, and latency for enterprise procurement.",
     version="1.0.0",
 )
 
-# Enable CORS for frontend & dashboard interactions
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -27,58 +29,83 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-runner = TestRunner()
-regression_detector = RegressionDetector(test_runner=runner)
+chatbot = ProcurementChatbot()
+runner = TestRunner(chatbot=chatbot)
 
 
 @app.get("/health", response_model=HealthResponse, tags=["System"])
 async def health_check():
     """
-    Returns API health status, version, evaluator readiness, and dataset size.
+    Returns system health status, version, mock status, and total golden test cases.
     """
-    try:
-        cases = runner.load_test_cases()
-        total_cases = len(cases)
-    except Exception:
-        total_cases = 0
-
+    total_cases = len(procurement_store.test_cases)
     return HealthResponse(
         status="healthy",
-        app_name="LLM Quality Tester",
+        app_name="ProcureQA",
         version="1.0.0",
-        mock_llm_enabled=runner.llm_client.use_mock,
+        mock_llm_enabled=chatbot.use_mock,
         total_golden_test_cases=total_cases,
         deepeval_installed=runner.evaluator.has_deepeval,
         timestamp=datetime.datetime.now(datetime.timezone.utc).isoformat(),
     )
 
 
-@app.get("/test-cases", response_model=List[TestCase], tags=["Test Cases"])
-async def get_test_cases(
-    category: Optional[str] = Query(None, description="Filter test cases by category"),
-    security_only: Optional[bool] = Query(None, description="Filter for security-sensitive tests"),
-):
+@app.post("/chat", response_model=ChatResponse, tags=["Chatbot"])
+async def chat(request: ChatRequest):
     """
-    Retrieves test cases from the golden dataset with optional category filtering.
+    Interact with the procurement chatbot to answer inquiries regarding purchase requisitions,
+    orders, vendors, budgets, and compliance policies.
     """
+    if not request.message.strip():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Message cannot be empty.")
+
     try:
-        categories = [category] if category else None
-        cases = runner.load_test_cases(categories=categories)
-        if security_only:
-            cases = [c for c in cases if c.security_sensitive or "security" in c.category]
-        return cases
+        active_bot = chatbot
+        if request.use_mock is not None and request.use_mock != chatbot.use_mock:
+            active_bot = ProcurementChatbot(use_mock=request.use_mock)
+
+        response_text, latency_ms, sources = await active_bot.answer_query(prompt=request.message)
+        return ChatResponse(
+            response=response_text,
+            latency_ms=latency_ms,
+            sources_consulted=sources,
+            is_mock=active_bot.use_mock,
+        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to load test cases: {str(e)}",
+            detail=f"Chat processing failed: {str(e)}",
         )
 
 
-@app.post("/run-tests", response_model=TestSuiteRun, status_code=status.HTTP_201_CREATED, tags=["Execution"])
+@app.get("/procurement/requisitions", response_model=List[PurchaseRequisitionItem], tags=["Procurement Data"])
+async def get_requisitions(status_filter: Optional[str] = Query(None, description="Optional status filter")):
+    """
+    Lists enterprise purchase requisitions with optional status filtering.
+    """
+    prs = procurement_store.purchase_requisitions
+    if status_filter:
+        prs = [pr for pr in prs if pr.get("status", "").lower() == status_filter.lower()]
+    return prs
+
+
+@app.get("/procurement/orders", response_model=List[PurchaseOrderItem], tags=["Procurement Data"])
+async def get_orders(vendor_filter: Optional[str] = Query(None, description="Optional vendor name filter")):
+    """
+    Lists purchase orders with optional vendor name filtering.
+    """
+    pos = procurement_store.purchase_orders
+    if vendor_filter:
+        v_low = vendor_filter.lower()
+        pos = [po for po in pos if v_low in po.get("vendor_name", "").lower()]
+    return pos
+
+
+@app.post("/run-tests", response_model=TestSuiteRun, status_code=status.HTTP_201_CREATED, tags=["Test Automation"])
 async def run_tests(payload: Optional[RunTestsRequest] = None):
     """
-    Triggers automated test suite execution against LLM.
-    Evaluates correctness, latency, security guardrails, and hallucination metrics.
+    Triggers automated LLM test suite execution across correctness, hallucination,
+    security, API, and performance categories.
     """
     req = payload or RunTestsRequest()
     try:
@@ -98,24 +125,18 @@ async def run_tests(payload: Optional[RunTestsRequest] = None):
         )
 
 
-@app.get("/results", response_model=List[TestSuiteRun], tags=["Reports"])
+@app.get("/results", response_model=List[TestSuiteRun], tags=["Test Automation"])
 async def get_all_results():
     """
-    Retrieves all historical test execution runs sorted newest to oldest.
+    Retrieves historical test execution runs.
     """
-    try:
-        return runner.list_all_runs()
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch test run history: {str(e)}",
-        )
+    return runner.list_all_runs()
 
 
-@app.get("/results/{run_id}", response_model=TestSuiteRun, tags=["Reports"])
+@app.get("/results/{run_id}", response_model=TestSuiteRun, tags=["Test Automation"])
 async def get_result_by_id(run_id: str):
     """
-    Retrieves detailed results for a specific test run.
+    Retrieves detailed results for a specific test run ID.
     """
     run = runner.get_run_by_id(run_id)
     if not run:
@@ -126,36 +147,6 @@ async def get_result_by_id(run_id: str):
     return run
 
 
-@app.get("/regression", response_model=RegressionReport, tags=["Regression"])
-async def get_regression_report(
-    current_run_id: Optional[str] = Query(None, description="Optional run ID for current evaluation"),
-    baseline_run_id: Optional[str] = Query(None, description="Optional run ID for baseline comparison"),
-):
-    """
-    Compares test runs to detect quality degradation, latency regressions,
-    and newly failing test cases.
-    """
-    try:
-        if current_run_id and baseline_run_id:
-            curr = runner.get_run_by_id(current_run_id)
-            base = runner.get_run_by_id(baseline_run_id)
-            if not curr:
-                raise HTTPException(status_code=404, detail=f"Current run '{current_run_id}' not found.")
-            if not base:
-                raise HTTPException(status_code=404, detail=f"Baseline run '{baseline_run_id}' not found.")
-            return regression_detector.compare_runs(current_run=curr, previous_run=base)
-
-        return regression_detector.evaluate_latest_regression()
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Regression evaluation failed: {str(e)}",
-        )
-
-
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("app.main:app", host="0.0.0.0", port=8080, reload=True)
-

@@ -4,104 +4,101 @@ from starlette.testclient import TestClient
 
 def test_health_endpoint(client: TestClient):
     """
-    Validates /health endpoint status, response schema, and dataset availability.
+    Validates /health response status 200, system name 'ProcureQA', and golden dataset size.
     """
     response = client.get("/health")
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "healthy"
-    assert data["app_name"] == "LLM Quality Tester"
-    assert "version" in data
+    assert data["app_name"] == "ProcureQA"
     assert data["total_golden_test_cases"] >= 20
-    assert "timestamp" in data
+    assert "version" in data
 
 
-def test_get_test_cases_all(client: TestClient):
+def test_post_chat_valid(client: TestClient):
     """
-    Validates /test-cases returns golden dataset with required fields.
+    Validates POST /chat with valid procurement message.
     """
-    response = client.get("/test-cases")
+    payload = {"message": "What is the status of PR-1024?", "use_mock": True}
+    response = client.post("/chat", json=payload)
     assert response.status_code == 200
-    cases = response.json()
-    assert len(cases) >= 20
-    first = cases[0]
-    assert "id" in first
-    assert "category" in first
-    assert "prompt" in first
-    assert "expected_answer" in first
+    data = response.json()
+    assert "response" in data
+    assert "latency_ms" in data
+    assert "Pending Manager Approval" in data["response"]
 
 
-def test_get_test_cases_filtered(client: TestClient):
+def test_post_chat_empty_payload_error(client: TestClient):
     """
-    Validates filtering test cases by category and security_only flag.
+    Validates HTTP 400 or 422 error handling on empty or whitespace message.
     """
-    response = client.get("/test-cases?category=smart_home_factual")
+    response = client.post("/chat", json={"message": "   "})
+    assert response.status_code in (400, 422)
+
+
+def test_post_chat_missing_required_fields(client: TestClient):
+    """
+    Validates HTTP 422 Unprocessable Entity when required 'message' field is absent.
+    """
+    response = client.post("/chat", json={})
+    assert response.status_code == 422
+
+
+def test_get_procurement_requisitions(client: TestClient):
+    """
+    Validates GET /procurement/requisitions returns requisition list and supports status filtering.
+    """
+    response = client.get("/procurement/requisitions")
     assert response.status_code == 200
-    cases = response.json()
-    assert len(cases) > 0
-    assert all(c["category"] == "smart_home_factual" for c in cases)
+    prs = response.json()
+    assert len(prs) >= 5
+    assert any(pr["id"] == "PR-1024" for pr in prs)
 
-    # Filter security only
-    sec_response = client.get("/test-cases?security_only=true")
-    assert sec_response.status_code == 200
-    sec_cases = sec_response.json()
-    assert len(sec_cases) >= 6
-    assert all(c["security_sensitive"] or "security" in c["category"] for c in sec_cases)
+    # Filtered
+    filtered = client.get("/procurement/requisitions?status_filter=Approved")
+    assert filtered.status_code == 200
+    assert all(pr["status"] == "Approved" for pr in filtered.json())
+
+
+def test_get_procurement_orders(client: TestClient):
+    """
+    Validates GET /procurement/orders returns orders and supports vendor filtering.
+    """
+    response = client.get("/procurement/orders")
+    assert response.status_code == 200
+    pos = response.json()
+    assert len(pos) >= 4
+    assert any(po["id"] == "PO-2045" for po in pos)
+
+    # Filtered
+    v_filtered = client.get("/procurement/orders?vendor_filter=TechSource")
+    assert v_filtered.status_code == 200
+    assert all("TechSource" in po["vendor_name"] for po in v_filtered.json())
 
 
 def test_run_tests_endpoint(client: TestClient):
     """
-    Validates POST /run-tests executing a subset of tests with mock provider.
+    Validates POST /run-tests triggers automated test execution and returns HTTP 201 Created.
     """
     payload = {
         "use_mock": True,
-        "test_ids": ["TC-001", "TC-002"],
+        "test_ids": ["TC-CORR-01", "TC-HALLUC-01"],
     }
     response = client.post("/run-tests", json=payload)
     assert response.status_code == 201
     data = response.json()
-    assert "run_id" in data
     assert data["total_tests"] == 2
-    assert data["passed_tests"] >= 1
-    assert "pass_rate" in data
-    assert len(data["results"]) == 2
-
-    run_id = data["run_id"]
-
-    # Verify retrieval by run_id
-    detail_resp = client.get(f"/results/{run_id}")
-    assert detail_resp.status_code == 200
-    assert detail_resp.json()["run_id"] == run_id
+    assert data["passed_tests"] == 2
+    assert data["pass_rate"] == 100.0
 
 
-def test_run_tests_invalid_id(client: TestClient):
+def test_get_results_and_not_found(client: TestClient):
     """
-    Validates error handling when nonexistent test IDs are requested.
+    Validates GET /results history and 404 on nonexistent run ID.
     """
-    payload = {
-        "use_mock": True,
-        "test_ids": ["TC-NONEXISTENT-999"],
-    }
-    response = client.post("/run-tests", json=payload)
-    assert response.status_code == 400
+    resp = client.get("/results")
+    assert resp.status_code == 200
+    assert isinstance(resp.json(), list)
 
-
-def test_results_not_found(client: TestClient):
-    """
-    Validates 404 response for invalid run_id.
-    """
-    response = client.get("/results/run_invalid_999999")
-    assert response.status_code == 404
-
-
-def test_regression_endpoint(client: TestClient):
-    """
-    Validates GET /regression endpoint returns valid schema structure.
-    """
-    response = client.get("/regression")
-    assert response.status_code == 200
-    data = response.json()
-    assert "has_comparison" in data
-    assert "current_run_id" in data
-    assert "status_summary" in data
-
+    notFound = client.get("/results/nonexistent_run_99999")
+    assert notFound.status_code == 404

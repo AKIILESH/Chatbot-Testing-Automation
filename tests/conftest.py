@@ -1,62 +1,46 @@
 import pytest
-import shutil
-from pathlib import Path
 from starlette.testclient import TestClient
 from app.main import app
+from app.chatbot import ProcurementChatbot
+from app.evaluator import ProcureEvaluator
 from app.test_runner import TestRunner
-from app.evaluator import QualityEvaluator
-from app.llm_client import LLMClient
-from app.regression import RegressionDetector
 from app.schemas import TestCase
 
 
 @pytest.fixture(scope="session")
 def client():
-    """
-    Synchronous FastAPI test client.
-    """
     return TestClient(app)
 
 
 @pytest.fixture
-def tmp_reports_dir(tmp_path):
-    """
-    Isolated temporary reports directory for testing.
-    """
-    reports_dir = tmp_path / "reports"
-    reports_dir.mkdir(parents=True, exist_ok=True)
-    return str(reports_dir)
+def chatbot():
+    return ProcurementChatbot(use_mock=True)
 
 
 @pytest.fixture
-def isolated_runner(tmp_reports_dir):
-    """
-    TestRunner instance pointing to isolated temporary storage and mock LLM.
-    """
-    mock_client = LLMClient(use_mock=True)
-    evaluator = QualityEvaluator()
-    return TestRunner(
-        reports_dir=tmp_reports_dir,
-        llm_client=mock_client,
-        evaluator=evaluator,
+def evaluator():
+    return ProcureEvaluator(
+        correctness_threshold=0.70,
+        faithfulness_threshold=0.70,
+        hallucination_threshold=0.30,
     )
 
 
 @pytest.fixture
-def isolated_regression_detector(isolated_runner):
-    return RegressionDetector(test_runner=isolated_runner)
+def isolated_runner(tmp_path, chatbot, evaluator):
+    tmp_reports = tmp_path / "reports"
+    tmp_reports.mkdir(parents=True, exist_ok=True)
+    return TestRunner(reports_dir=str(tmp_reports), chatbot=chatbot, evaluator=evaluator)
 
 
 @pytest.fixture
-def sample_test_case():
+def sample_pr_test_case():
     return TestCase(
-        id="TC-FIXTURE-1",
-        category="smart_home_factual",
-        name="Fixture Test Fan Speed",
-        prompt="How do I set the fan to speed 3?",
-        context="Press the 3 button on the remote to set speed 3.",
-        expected_answer="Press button 3 on your Atomberg remote control.",
+        id="TC-FIXTURE-PR",
+        category="correctness",
+        name="Fixture PR-1024 Check",
+        prompt="What is the status of PR-1024?",
+        expected_answer="Purchase requisition PR-1024 is currently 'Pending Manager Approval' with estimated cost ₹6,50,000.",
         security_sensitive=False,
-        max_allowed_latency_ms=2500,
+        max_allowed_latency_ms=2000,
     )
-

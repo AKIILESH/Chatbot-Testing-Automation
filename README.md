@@ -1,76 +1,117 @@
-# 🛡️ LLM Quality Tester — AI Test Automation Framework
+# 📦 ProcureQA — LLM Test Automation Mini Framework
 
-An automated Quality Engineering and Security Testing platform for LLM-powered applications, demonstrating automated evaluation, hallucination detection, prompt injection defense, regression tracking, and latency benchmarking.
+An automated AI Quality Engineering and Security Testing framework for an AI-powered enterprise procurement chatbot.
 
-**Target Context:** Built for **Atomberg Technologies** evaluating **"Atomberg Aura"**, a smart home IoT assistant controlling BLDC smart fans (Renesa, Aris, Studio), smart door locks, and home energy eco-systems.
-
----
-
-## 🌟 Key Capabilities
-
-- **🧪 Automated LLM Evaluation Pipeline**: Quantitative scoring of answer correctness, contextual relevance, faithfulness/groundedness, and response latency SLAs.
-- **👁️ Hallucination & Trap Detection**: Uncovers ungrounded claims, invented product capabilities (e.g., "nuclear fusion batteries", "espresso brewing in fans"), and dangerous operational advice.
-- **🔒 Defensive Security & Adversarial Testing**:
-  - Prompt Injection & DAN jailbreak resistance.
-  - Confidential system meta-prompt extraction protection.
-  - PII and credential leakage defense (Wi-Fi passwords, user contact logs).
-  - Safety-critical device actuator guardrails (blocking unauthenticated door unlocks or dangerous fan motor RPM overrides).
-- **📉 Automated Regression Testing**:
-  - Stores historical test suite execution runs.
-  - Automatically compares current run against baseline.
-  - Detects quality degradation (pass rate drops, newly failing tests) and latency spikes.
-- **⚡ Dual-Engine Evaluator (DeepEval + Deterministic)**:
-  - **Deterministic NLP & Regex Guardrails**: 100% offline, zero API-key requirement, ultra-fast (<2ms/test), fully reproducible for CI/CD pipelines.
-  - **DeepEval LLM-as-a-Judge**: Optional pluggable LLM judge for deep semantic evaluation with transparent disclaimers on judge model biases.
-- **🌐 FastAPI Backend**: Clean REST API with Pydantic v2 schemas and OpenAPI documentation.
-- **📊 Modern Dark Streamlit QA Dashboard**: Inspired by modern developer tools (Vercel/Linear aesthetic) featuring real-time execution progress, interactive charts, failure diagnostics, and regression diffs.
-- **🔄 CI/CD Automation**: GitHub Actions workflow running automated deterministic tests on every push/PR without external API dependencies.
+The framework automatically evaluates:
+- **Answer Correctness & Factual Grounding**
+- **Hallucination & Nonexistent Entity Detection**
+- **Prompt Injection & Adversarial Security Resistance**
+- **API Robustness & Error Handling**
+- **Response Latency & Performance SLA Benchmarking**
 
 ---
 
 ## 🏗️ Architecture
 
 ```
-llm-quality-tester/
+procureqa/
 ├── app/
-│   ├── main.py            # FastAPI REST endpoints
-│   ├── llm_client.py      # OpenAI client + specialized Atomberg Aura Mock LLM
-│   ├── evaluator.py       # Hybrid evaluator: DeepEval + deterministic + security guards
-│   ├── test_runner.py     # Test suite executor, dataset loader & report persistence
-│   ├── regression.py      # Regression comparison and degradation detector
-│   └── schemas.py         # Pydantic v2 request, response, and metric schemas
+│   ├── main.py              # FastAPI REST backend
+│   ├── chatbot.py           # Enterprise procurement chatbot (Live API + Deterministic Mock)
+│   ├── procurement_data.py  # Mock procurement database loader & helper utilities
+│   ├── evaluator.py         # Dual-engine evaluation (DeepEval + deterministic factual assertions)
+│   ├── test_runner.py       # Test suite runner & audit report persistence
+│   └── schemas.py           # Pydantic v2 schemas for chat, tests, metrics, and procurement
 ├── tests/
-│   ├── conftest.py        # Pytest test client and isolated storage fixtures
-│   ├── test_api.py        # API status codes, schema validation, and endpoint tests
-│   ├── test_evaluation.py # Correctness, hallucination trap, and latency SLA tests
-│   ├── test_security.py   # Prompt injection, jailbreak, and PII leakage tests
-│   └── test_regression.py # Quality and latency regression detection tests
+│   ├── conftest.py          # Pytest fixtures and mock client configurations
+│   ├── test_correctness.py  # Requisitions, orders, vendors, budgets, and policies
+│   ├── test_hallucination.py# Nonexistent POs, vendors, policies, and unavailable entity handling
+│   ├── test_security.py     # Prompt injections, approval bypasses, PII & SQL manipulation
+│   ├── test_api.py          # REST endpoints, payload validation, and HTTP status codes
+│   └── test_performance.py  # Response latency measurements and configurable SLA enforcement
 ├── data/
-│   └── golden_dataset.json # 21 curated smart home test cases across 10 categories
+│   └── procurement.json     # Mock procurement database & 21 golden test cases
 ├── dashboard/
-│   └── app.py             # Streamlit QA interactive dashboard
-├── reports/               # Persistent JSON execution reports and latest.json
+│   └── app.py               # Modern dark-themed Streamlit QA dashboard
+├── reports/                 # JSON test execution reports
 ├── .github/workflows/
-│   └── tests.yml          # GitHub Actions CI workflow
-├── .env.example           # Environment template
-├── pytest.ini             # Pytest configuration
-├── requirements.txt       # Project dependencies
-└── README.md
+│   └── tests.yml            # GitHub Actions CI workflow
+├── requirements.txt         # Dependencies (FastAPI, DeepEval, Streamlit, Pytest, etc.)
+├── .env.example             # Environment configuration template
+└── pytest.ini               # Pytest configuration
 ```
 
 ---
 
-## 🚀 Quick Start Guide
+## 💼 Domain & Mock Procurement Knowledge Base
 
-### 1. Prerequisites
-- Python 3.11+
-- Virtual environment (`venv`)
+The chatbot is grounded in an enterprise procurement knowledge base (`data/procurement.json`):
 
-### 2. Installation
+1. **Purchase Requisitions (PR)**:
+   - `PR-1024`: 10 Laptops, Requester: Rahul (IT), ₹6,50,000, Status: *Pending Manager Approval*
+   - `PR-1025`: Ergonomic Chairs, Requester: Priya (Facilities), ₹1,87,500, Status: *Approved*
+   - `PR-1026`: Cloud Security, Requester: Vikram, ₹8,20,000, Status: *Rejected (Budget Exceeded)*
+   - `PR-1027`: Office Stationery, Requester: Sneha, ₹35,000, Status: *Auto-Approved*
+   - `PR-1028`: Factory Assembly Sensors, Requester: Amit, ₹12,00,000, Status: *Pending Finance Approval*
+
+2. **Purchase Orders (PO)**:
+   - `PO-2045`: TechSource India, ₹5,80,000, Status: *Issued* (8 Workstations)
+   - `PO-2046`: Apex Logistics & Cargo, ₹1,45,000, Status: *Fulfilled*
+   - `PO-2047`: OfficePro Supplies, ₹42,000, Status: *Pending Delivery*
+   - `PO-2048`: Precision Motors & Controls, ₹9,50,000, Status: *Under Legal Review*
+
+3. **Approved Vendors**:
+   - `VEN-001`: TechSource India (IT Equipment, Net 30)
+   - `VEN-002`: Apex Logistics & Cargo (Logistics & Freight, Net 15)
+   - `VEN-003`: OfficePro Supplies (Office Consumables, Net 30)
+   - `VEN-004`: Precision Motors & Controls (Industrial Machinery, Milestone-based)
+
+4. **Department Budgets**:
+   - `IT`: Allocated ₹25,00,000 | Spent ₹14,20,000 | Remaining ₹10,80,000
+   - `Facilities`: Allocated ₹12,00,000 | Spent ₹6,50,000 | Remaining ₹5,50,000
+   - `Manufacturing`: Allocated ₹50,00,000 | Spent ₹31,00,000 | Remaining ₹19,00,000
+   - `Operations`: Allocated ₹8,00,000 | Spent ₹3,20,000 | Remaining ₹4,80,000
+
+5. **Procurement Policies**:
+   - `POL-001`: Purchases up to ₹50,000 are auto-approved if within budget.
+   - `POL-002`: Purchases between ₹50,001 and ₹5,00,000 require Department Head approval and 2 comparative quotes.
+   - `POL-003`: Purchases above ₹5,00,000 require Department Head, Finance Controller, and General Manager approval.
+   - `POL-004`: Sole-source procurement without comparative bidding is strictly prohibited.
+   - `POL-005`: Confidential vendor quotations and profit margins must never be disclosed.
+
+---
+
+## 🧪 Test Automation Framework
+
+### Test Suite Categories (33 Total Automated Pytest Tests)
+
+| Test Module | Coverage |
+|---|---|
+| `test_correctness.py` | PR statuses, PO amounts, vendor categories, budget arithmetic, and policy approval thresholds |
+| `test_hallucination.py` | Nonexistent POs (`PO-9999`), missing vendors (`VEN-999`), fabricated Bitcoin policies, and ungrounded departments |
+| `test_security.py` | System prompt extraction, approval policy overrides, confidential bidding margin leakage, and SQL injection defenses |
+| `test_api.py` | Valid chat execution, empty message handling (400), missing fields (422), PR/PO filters, and 404 lookups |
+| `test_performance.py` | Response latency measurements, SLA threshold assertions (<2000ms), and excessive latency flags |
+
+---
+
+## ⚡ Evaluation Methodology
+
+The framework uses a **hybrid evaluation engine**:
+1. **Deterministic Assertions**:
+   - Exact entity validation on factual procurement records (PR/PO IDs, rupee amounts in Indian numbering format, statuses).
+   - Admission assertions on hallucination trap queries (verifying the chatbot explicitly admits when records are nonexistent).
+   - Defensive refusal checks on adversarial prompts.
+2. **DeepEval LLM-as-a-Judge**:
+   - Pluggable `AnswerRelevancyMetric` and `FaithfulnessMetric` when OpenAI API keys are configured.
+   - Transparent reporting on LLM judge biases (position bias, verbosity bias).
+
+---
+
+## 🚀 Quickstart & Setup
+
+### 1. Installation
 ```bash
-# Clone and navigate to workspace
-cd llm-quality-tester
-
 # Create and activate virtual environment
 python3 -m venv .venv
 source .venv/bin/activate
@@ -79,114 +120,55 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 3. Environment Configuration
+### 2. Environment Configuration
 Copy `.env.example` to `.env`:
 ```bash
 cp .env.example .env
 ```
-By default, `USE_MOCK_LLM=true` is enabled. You can run the entire test suite, API, and dashboard **out-of-the-box with zero API keys or external costs**.
-
-If you wish to evaluate a live OpenAI model (e.g. `gpt-4o-mini`), set:
-```env
-USE_MOCK_LLM=false
-OPENAI_API_KEY=sk-...
-LLM_MODEL=gpt-4o-mini
-```
+By default, `USE_MOCK_LLM=true` runs the entire suite **100% offline with zero API keys or external costs**.
 
 ---
 
 ## 🖥️ Running the Application
 
-### Option A: Launch the Streamlit QA Dashboard
-```bash
-.venv/bin/streamlit run dashboard/app.py
-```
-Open your browser at `http://localhost:8501`.
-- **Overview Tab**: Key QA metrics (Pass Rate, Total Tests, Hallucination Rate, Avg Latency), Category breakdown chart, Latency SLA distribution chart.
-- **Test Suite Execution Tab**: Run tests with 1 click, filter by status or keyword, expand individual test case diagnostics.
-- **Security Tab**: Adversarial defense audit (Prompt Injection, System Prompt Leaks, PII leakage, Physical Overrides).
-- **Regression Analysis Tab**: Automated diff comparing the latest run with previous executions to spot quality regressions or newly broken tests.
-
-### Option B: Launch the FastAPI Backend
-```bash
-.venv/bin/uvicorn app.main:app --reload --port 8080
-```
-Interactive Swagger / OpenAPI docs are available at: `http://localhost:8080/docs`.
-
-#### Key Endpoints:
-- `GET /health`: API status, version, evaluator status, and total golden test cases.
-- `GET /test-cases`: Filterable test cases (`?category=...&security_only=true`).
-- `POST /run-tests`: Execute test suite (`{"use_mock": true, "categories": ["smart_home_factual"]}`).
-- `GET /results`: Historical test execution runs.
-- `GET /results/{run_id}`: Detailed test results for a specific run.
-- `GET /regression`: Proactive regression diff report.
-
-### Option C: Run Pytest Automation Suite
+### 1. Run the Pytest Test Suite
 ```bash
 .venv/bin/pytest -v
 ```
-All 22 unit, integration, and security tests run deterministically in ~1 second.
+*(Runs 33 automated tests across correctness, hallucination, security, API, and performance in ~2s)*
+
+### 2. Launch the Streamlit QA Dashboard
+```bash
+.venv/bin/streamlit run dashboard/app.py --server.port 8501
+```
+Open **[http://localhost:8501](http://localhost:8501)** to access:
+- **Overview & Metrics**: Total tests, pass rate, avg latency, hallucination rate, and category charts.
+- **Test Suite Execution**: 1-click test execution with status filters and individual test failure explanations.
+- **Security & Policy Defense**: Adversarial prompt injection audit results.
+- **Procurement Data Explorer**: Browse purchase requisitions, orders, vendors, budgets, and policies.
+- **Interactive Chatbot**: Live chat interface with the procurement assistant.
+
+### 3. Launch the FastAPI Backend
+```bash
+.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
+```
+Interactive Swagger API documentation: **[http://localhost:8080/docs](http://localhost:8080/docs)**.
+
+#### Endpoints:
+- `GET /health`: Health status and dataset count
+- `POST /chat`: Query the procurement assistant
+- `GET /procurement/requisitions`: View purchase requisitions
+- `GET /procurement/orders`: View purchase orders
+- `POST /run-tests`: Run the automated evaluation suite
+- `GET /results`: Retrieve historical test run audit reports
 
 ---
 
-## 📋 Golden Test Dataset (21 Test Cases)
+## 🔄 CI/CD Automation
 
-| Test ID | Category | Scenario / Intent |
-|---|---|---|
-| `TC-001` | `smart_home_factual` | Sleep Mode activation on Atomberg Renesa fan |
-| `TC-002` | `smart_home_factual` | Power consumption of Aris fan at speed 1 (6W) |
-| `TC-003` | `smart_home_factual` | Door lock 2.4 GHz vs 5 GHz Wi-Fi compatibility |
-| `TC-004` | `smart_home_factual` | Blinking amber LED canopy status diagnostics |
-| `TC-005` | `general_factual` | BLDC motor efficiency vs AC induction motor |
-| `TC-006` | `general_factual` | Zigbee 3.0 / Matter radio frequency specs (2.4 GHz) |
-| `TC-007` | `context_grounded` | Warranty policy on-site replacement terms |
-| `TC-008` | `context_grounded` | Integrated voltage stabilizer spec (165V-285V AC) |
-| `TC-009` | `hallucination_detection` | Hallucination trap: Fake nuclear battery in fan |
-| `TC-010` | `hallucination_detection` | Hallucination trap: Coffee brewing capability in fan |
-| `TC-011` | `multi_turn_context` | Anaphora & state resolution ("Turn off the device we were talking about") |
-| `TC-012` | `multi_turn_context` | Follow-up relative command ("Increase its speed by 2 levels") |
-| `TC-013` | `security_prompt_injection` | DAN jailbreak attempt to bypass deadbolts |
-| `TC-014` | `security_prompt_injection` | Admin override attempting system prompt extraction |
-| `TC-015` | `security_prompt_injection` | Indirect prompt injection via multilingual translation |
-| `TC-016` | `security_pii_leakage` | Master Wi-Fi password & payment credential leak attempt |
-| `TC-017` | `security_pii_leakage` | Previous tenant guest names and phone numbers leak attempt |
-| `TC-018` | `security_unauthorized_device_control` | Unauthenticated emergency verbal door unlock attempt |
-| `TC-019` | `security_unauthorized_device_control` | Hazardous fan motor speed override (10,000 RPM) |
-| `TC-020` | `refusal_behavior` | Third-party device hacking request rejection |
-| `TC-021` | `incorrect_answer_scenario` | Hazardous recommendation check (440V 3-phase line) |
-
----
-
-## 🔍 Evaluation Metrics & Limitations
-
-In compliance with rigorous QA standards:
-1. **Answer Correctness**: Evaluates token recall, sequence similarity, and negation consistency against golden expectations.
-2. **Contextual Relevance**: Measures overlap between prompt query entities and generated content.
-3. **Faithfulness**: Measures whether claims in the actual response are supported by provided context.
-4. **Hallucination Detection**: Explicit checks against fabricated specs or hazardous instructions.
-5. **Latency SLA**: Confirms response execution time is within defined SLA bounds (default: ≤ 2500ms).
-
-> **QA Engineering Note on Evaluation Limitations:**
-> Automated scores are quantitative heuristics and signals. An automated test score does **not** mathematically prove absolute semantic correctness. LLM-as-a-judge evaluators (e.g. DeepEval with GPT-4o-mini) carry inherent biases:
-> - *Position bias* (favoring responses presented first in prompts).
-> - *Verbosity bias* (favoring longer, articulate answers over concise answers).
-> - *Stochastic variability* (non-zero temperature variance).
-> Production AI quality assurance should combine automated regression test suites, deterministic guardrails, and periodic human-in-the-loop audit sampling.
-
----
-
-## 🔄 CI/CD Pipeline
-
-The `.github/workflows/tests.yml` pipeline automates continuous integration:
-1. Triggers on pull requests and pushes to `main`.
-2. Sets up Python 3.11 and installs project dependencies.
-3. Runs the test suite in deterministic mode (`USE_MOCK_LLM=true`) ensuring zero flaky network calls or external API token failures.
-4. Produces JUnit XML test reports and uploads execution artifacts.
-5. Blocks PR merges if any regression or safety assertion fails.
-
----
-
-## 🎯 Author
-**Candidate for AI Quality Engineer**  
-Atomberg Technologies
-
+The GitHub Actions workflow (`.github/workflows/tests.yml`):
+- Runs automatically on pull requests and pushes to `main`.
+- Installs dependencies on Python 3.11.
+- Executes the deterministic Pytest suite without requiring external API keys.
+- Produces JUnit XML reports and uploads artifacts.
+- Fails the build if any correctness, security, or API assertion fails.

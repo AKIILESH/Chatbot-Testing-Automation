@@ -5,57 +5,47 @@ import datetime
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 from app.schemas import TestCase, TestResult, TestSuiteRun
-from app.llm_client import LLMClient
-from app.evaluator import QualityEvaluator
+from app.chatbot import ProcurementChatbot
+from app.evaluator import ProcureEvaluator
+from app.procurement_data import procurement_store
 
 
 class TestRunner:
     """
-    Automated Test Runner for LLM Quality & Safety Evaluation.
-    Loads golden datasets, executes test suites, records latencies, evaluates results,
-    and persists structured audit reports.
+    Automated Test Runner for Procurement Chatbot.
+    Loads procurement golden test cases, triggers chatbot, executes evaluations,
+    and stores structured audit reports.
     """
 
     def __init__(
         self,
-        dataset_path: Optional[str] = None,
         reports_dir: Optional[str] = None,
-        llm_client: Optional[LLMClient] = None,
-        evaluator: Optional[QualityEvaluator] = None,
+        chatbot: Optional[ProcurementChatbot] = None,
+        evaluator: Optional[ProcureEvaluator] = None,
     ):
         base_dir = Path(__file__).resolve().parent.parent
-        self.dataset_path = Path(dataset_path or (base_dir / "data" / "golden_dataset.json"))
         self.reports_dir = Path(reports_dir or (base_dir / "reports"))
         self.reports_dir.mkdir(parents=True, exist_ok=True)
 
-        self.llm_client = llm_client or LLMClient()
-        self.evaluator = evaluator or QualityEvaluator()
+        self.chatbot = chatbot or ProcurementChatbot()
+        self.evaluator = evaluator or ProcureEvaluator()
 
     def load_test_cases(
         self,
         categories: Optional[List[str]] = None,
         test_ids: Optional[List[str]] = None,
     ) -> List[TestCase]:
-        """
-        Loads test cases from the golden dataset with optional filtering.
-        """
-        if not self.dataset_path.exists():
-            raise FileNotFoundError(f"Golden dataset not found at {self.dataset_path}")
-
-        with open(self.dataset_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-
-        raw_cases = data.get("test_cases", [])
-        test_cases: List[TestCase] = []
+        raw_cases = procurement_store.test_cases
+        cases: List[TestCase] = []
 
         for item in raw_cases:
             if test_ids and item.get("id") not in test_ids:
                 continue
             if categories and item.get("category") not in categories:
                 continue
-            test_cases.append(TestCase(**item))
+            cases.append(TestCase(**item))
 
-        return test_cases
+        return cases
 
     async def run_suite(
         self,
@@ -64,40 +54,32 @@ class TestRunner:
         test_ids: Optional[List[str]] = None,
         use_mock: Optional[bool] = None,
         model: Optional[str] = None,
-        simulate_flaws: bool = False,
+        simulate_flaw: bool = False,
     ) -> TestSuiteRun:
-        """
-        Executes test suite asynchronously, calculates aggregate QA metrics,
-        and saves execution report.
-        """
         if use_mock is not None or model is not None:
-            self.llm_client = LLMClient(use_mock=use_mock, model=model)
+            self.chatbot = ProcurementChatbot(use_mock=use_mock, model=model)
 
         cases_to_run = test_cases or self.load_test_cases(categories=categories, test_ids=test_ids)
         if not cases_to_run:
             raise ValueError("No test cases selected for execution.")
 
-        run_id = f"run_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}"
+        run_id = f"procure_run_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}"
         timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
-
         results: List[TestResult] = []
 
         for tc in cases_to_run:
             try:
-                actual_response, latency_ms = await self.llm_client.generate_response(
+                actual_response, latency_ms, _ = await self.chatbot.answer_query(
                     prompt=tc.prompt,
-                    context=tc.context,
                     test_id=tc.id,
-                    simulate_flaws=simulate_flaws,
+                    simulate_flaw=simulate_flaw,
                 )
-
                 result = self.evaluator.evaluate_test_case(
                     test_case=tc,
                     actual_response=actual_response,
                     latency_ms=latency_ms,
                 )
             except Exception as e:
-                # Capture test failure gracefully
                 result = TestResult(
                     test_id=tc.id,
                     name=tc.name,
@@ -112,10 +94,8 @@ class TestRunner:
                     security_sensitive=tc.security_sensitive,
                     error=f"Execution error: {str(e)}",
                 )
-
             results.append(result)
 
-        # Aggregate metrics
         total = len(results)
         passed = sum(1 for r in results if r.passed)
         failed = total - passed
@@ -130,8 +110,8 @@ class TestRunner:
         suite_run = TestSuiteRun(
             run_id=run_id,
             timestamp=timestamp,
-            model_name=self.llm_client.model,
-            is_mock=self.llm_client.use_mock,
+            model_name=self.chatbot.model,
+            is_mock=self.chatbot.use_mock,
             total_tests=total,
             passed_tests=passed,
             failed_tests=failed,
@@ -141,31 +121,21 @@ class TestRunner:
             results=results,
         )
 
-        # Persist report
         self.save_report(suite_run)
-
         return suite_run
 
     def save_report(self, run: TestSuiteRun) -> Path:
-        """
-        Saves run report to both timestamped file and latest.json.
-        """
         report_file = self.reports_dir / f"{run.run_id}.json"
         latest_file = self.reports_dir / "latest.json"
 
         data = run.model_dump()
         with open(report_file, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
-
         with open(latest_file, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
-
         return report_file
 
     def get_run_by_id(self, run_id: str) -> Optional[TestSuiteRun]:
-        """
-        Retrieves a specific test run by its run_id.
-        """
         report_file = self.reports_dir / f"{run_id}.json"
         if not report_file.exists():
             return None
@@ -174,24 +144,20 @@ class TestRunner:
         return TestSuiteRun(**data)
 
     def get_latest_run(self) -> Optional[TestSuiteRun]:
-        """
-        Retrieves the most recent test run.
-        """
         latest_file = self.reports_dir / "latest.json"
         if latest_file.exists():
-            with open(latest_file, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            return TestSuiteRun(**data)
-
+            try:
+                with open(latest_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                return TestSuiteRun(**data)
+            except Exception:
+                pass
         history = self.list_all_runs()
         return history[0] if history else None
 
     def list_all_runs(self) -> List[TestSuiteRun]:
-        """
-        Returns all historical test runs sorted from newest to oldest.
-        """
         runs: List[TestSuiteRun] = []
-        for file in sorted(self.reports_dir.glob("run_*.json"), reverse=True):
+        for file in sorted(self.reports_dir.glob("procure_run_*.json"), reverse=True):
             try:
                 with open(file, "r", encoding="utf-8") as f:
                     data = json.load(f)
@@ -199,4 +165,3 @@ class TestRunner:
             except Exception:
                 continue
         return runs
-

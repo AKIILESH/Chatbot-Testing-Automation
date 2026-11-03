@@ -2,24 +2,64 @@ from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
 
 
+class ChatMessage(BaseModel):
+    role: str = Field(..., description="Role: user or assistant")
+    content: str = Field(..., description="Message text")
+
+
+class ChatRequest(BaseModel):
+    message: str = Field(..., min_length=1, description="User query directed to the procurement chatbot")
+    history: Optional[List[ChatMessage]] = Field(default=None, description="Optional conversational history")
+    use_mock: Optional[bool] = Field(default=None, description="Force mock LLM or live provider")
+
+
+class ChatResponse(BaseModel):
+    response: str
+    latency_ms: float
+    sources_consulted: List[str] = Field(default_factory=list)
+    is_mock: bool = True
+
+
+class PurchaseRequisitionItem(BaseModel):
+    id: str
+    requester: str
+    department: str
+    item: str
+    status: str
+    estimated_cost: float
+    rejection_reason: Optional[str] = None
+    date: str
+
+
+class PurchaseOrderItem(BaseModel):
+    id: str
+    vendor_id: str
+    vendor_name: str
+    amount: float
+    status: str
+    pr_id: str
+    delivery_date: str
+    items: str
+
+
 class TestCase(BaseModel):
     __test__ = False
     id: str = Field(..., description="Unique test case identifier")
-    category: str = Field(..., description="Category: smart_home_factual, general_factual, context_grounded, hallucination_detection, multi_turn_context, security_prompt_injection, security_pii_leakage, security_unauthorized_device_control, refusal_behavior, incorrect_answer_scenario")
-    name: str = Field(..., description="Descriptive name of test scenario")
-    prompt: str = Field(..., description="Input prompt delivered to LLM")
-    context: Optional[str] = Field(None, description="Grounding context or dialogue history")
-    expected_answer: str = Field(..., description="Reference golden answer or expected safety refusal")
-    security_sensitive: bool = Field(False, description="Whether test represents a security / adversarial boundary")
-    max_allowed_latency_ms: float = Field(3000.0, description="Max acceptable latency in milliseconds")
+    category: str = Field(..., description="correctness, hallucination, security, api_testing, performance")
+    name: str = Field(..., description="Scenario name")
+    prompt: str = Field(..., description="User query/test prompt")
+    context: Optional[str] = Field(None, description="Optional grounding context")
+    expected_answer: str = Field(..., description="Expected factual answer or security refusal")
+    security_sensitive: bool = Field(False, description="Whether test probes security/jailbreaks")
+    max_allowed_latency_ms: float = Field(2500.0, description="Latency SLA in milliseconds")
 
 
 class MetricScore(BaseModel):
-    score: float = Field(..., ge=0.0, le=1.0, description="Normalized score 0.0 to 1.0")
-    threshold: float = Field(..., ge=0.0, le=1.0, description="Passing threshold")
-    passed: bool = Field(..., description="Whether score meets criteria")
-    reasoning: str = Field(..., description="Detailed explanation of evaluation determination")
-    evaluator: str = Field("hybrid", description="Evaluation engine name (e.g. deepeval, semantic, rule-guard)")
+    score: float = Field(..., ge=0.0, le=1.0)
+    threshold: float = Field(..., ge=0.0, le=1.0)
+    passed: bool
+    reasoning: str
+    evaluator: str = "deterministic"
 
 
 class TestResult(BaseModel):
@@ -34,13 +74,13 @@ class TestResult(BaseModel):
     latency_ms: float
     passed: bool
     is_hallucinated: bool
-    correctness_score: float = Field(0.0, ge=0.0, le=1.0)
-    contextual_relevance_score: float = Field(0.0, ge=0.0, le=1.0)
-    faithfulness_score: float = Field(0.0, ge=0.0, le=1.0)
-    hallucination_score: float = Field(0.0, ge=0.0, le=1.0)
-    metrics: Dict[str, MetricScore] = Field(default_factory=dict)
     security_sensitive: bool = False
     security_incident_detected: bool = False
+    correctness_score: float = Field(0.0, ge=0.0, le=1.0)
+    faithfulness_score: float = Field(0.0, ge=0.0, le=1.0)
+    relevance_score: float = Field(0.0, ge=0.0, le=1.0)
+    hallucination_score: float = Field(0.0, ge=0.0, le=1.0)
+    metrics: Dict[str, MetricScore] = Field(default_factory=dict)
     error: Optional[str] = None
 
 
@@ -57,23 +97,6 @@ class TestSuiteRun(BaseModel):
     avg_latency_ms: float
     hallucination_rate: float
     results: List[TestResult]
-
-
-class RegressionReport(BaseModel):
-    has_comparison: bool
-    current_run_id: str
-    previous_run_id: Optional[str] = None
-    current_pass_rate: float
-    previous_pass_rate: Optional[float] = None
-    pass_rate_delta: Optional[float] = None
-    current_avg_latency_ms: float
-    previous_avg_latency_ms: Optional[float] = None
-    latency_delta_ms: Optional[float] = None
-    quality_degraded: bool = False
-    latency_increased: bool = False
-    newly_failing_tests: List[str] = Field(default_factory=list)
-    newly_passing_tests: List[str] = Field(default_factory=list)
-    status_summary: str = "No regression detected"
 
 
 class RunTestsRequest(BaseModel):

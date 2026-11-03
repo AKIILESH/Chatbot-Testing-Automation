@@ -16,18 +16,18 @@ if sys.path[0] != root_str:
         sys.path.remove(root_str)
     sys.path.insert(0, root_str)
 
-# If 'app' was registered as this single script module rather than the package app/, clear it
 if "app" in sys.modules and not hasattr(sys.modules["app"], "__path__"):
     del sys.modules["app"]
 
 from app.test_runner import TestRunner
-from app.regression import RegressionDetector
+from app.procurement_data import procurement_store, format_inr
+from app.chatbot import ProcurementChatbot
 from app.schemas import TestSuiteRun
 
 # Page Configuration
 st.set_page_config(
-    page_title="LLM Quality Tester — Atomberg AI Automation",
-    page_icon="🛡️",
+    page_title="ProcureQA — LLM Test Automation Framework",
+    page_icon="📦",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -36,17 +36,15 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    /* Global modern dark palette */
     .stApp {
-        background-color: #0b0f17;
+        background-color: #0c1017;
         color: #e2e8f0;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
     
-    /* Top banner */
-    .qa-header {
-        background: linear-gradient(135deg, #131b2e 0%, #17223b 100%);
-        border: 1px solid #1e293b;
+    .procure-header {
+        background: linear-gradient(135deg, #111a2e 0%, #172642 100%);
+        border: 1px solid #1e2e4a;
         border-radius: 12px;
         padding: 20px 24px;
         margin-bottom: 24px;
@@ -54,8 +52,8 @@ st.markdown(
         justify-content: space-between;
         align-items: center;
     }
-    .qa-title {
-        font-size: 1.5rem;
+    .procure-title {
+        font-size: 1.55rem;
         font-weight: 700;
         color: #f8fafc;
         margin: 0;
@@ -63,34 +61,33 @@ st.markdown(
         align-items: center;
         gap: 12px;
     }
-    .qa-subtitle {
+    .procure-subtitle {
         color: #94a3b8;
-        font-size: 0.9rem;
+        font-size: 0.88rem;
         margin-top: 4px;
         margin-bottom: 0;
     }
     
-    /* Metric Cards */
     .metric-card {
-        background-color: #111827;
-        border: 1px solid #1f2937;
+        background-color: #121824;
+        border: 1px solid #1e293b;
         border-radius: 10px;
         padding: 16px 20px;
         transition: border-color 0.2s ease;
     }
     .metric-card:hover {
-        border-color: #374151;
+        border-color: #334155;
     }
     .metric-label {
         color: #94a3b8;
-        font-size: 0.8rem;
+        font-size: 0.78rem;
         text-transform: uppercase;
         letter-spacing: 0.05em;
         font-weight: 600;
         margin-bottom: 6px;
     }
     .metric-val {
-        font-size: 1.75rem;
+        font-size: 1.8rem;
         font-weight: 700;
         color: #f1f5f9;
     }
@@ -98,31 +95,6 @@ st.markdown(
         font-size: 0.78rem;
         color: #64748b;
         margin-top: 4px;
-    }
-    
-    /* Status Pills */
-    .status-pill-pass {
-        background-color: #064e3b;
-        color: #34d399;
-        padding: 3px 10px;
-        border-radius: 9999px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        display: inline-block;
-    }
-    .status-pill-fail {
-        background-color: #7f1d1d;
-        color: #f87171;
-        padding: 3px 10px;
-        border-radius: 9999px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        display: inline-block;
-    }
-    
-    /* Code block container */
-    .stCodeBlock {
-        border-radius: 8px !important;
     }
     </style>
     """,
@@ -133,133 +105,109 @@ st.markdown(
 @st.cache_resource
 def get_services():
     runner = TestRunner()
-    regression_detector = RegressionDetector(test_runner=runner)
-    return runner, regression_detector
+    bot = ProcurementChatbot()
+    return runner, bot
 
 
-runner, regression_detector = get_services()
+runner, chatbot = get_services()
 
-
-# Top Navigation / Header
+# Top Header
 st.markdown(
     """
-    <div class="qa-header">
+    <div class="procure-header">
         <div>
-            <h1 class="qa-title">🛡️ LLM Quality Tester <span style="font-size:0.8rem; background:#1e293b; color:#38bdf8; padding:3px 8px; border-radius:6px; border:1px solid #334155;">Atomberg Aura QA</span></h1>
-            <p class="qa-subtitle">Automated Evaluation, Hallucination Detection, Prompt Injection Defense & Regression Testing</p>
+            <h1 class="procure-title">📦 ProcureQA <span style="font-size:0.8rem; background:#1e293b; color:#38bdf8; padding:3px 9px; border-radius:6px; border:1px solid #334155;">Enterprise Edition</span></h1>
+            <p class="procure-subtitle">Automated LLM Testing for Procurement: Correctness, Hallucination Traps, Security Defense & Latency SLAs</p>
         </div>
         <div style="text-align: right;">
-            <span style="font-size:0.8rem; color:#94a3b8;">Target App: <strong>Atomberg Smart Home IoT Assistant</strong></span><br/>
-            <span style="font-size:0.75rem; color:#64748b;">Framework: DeepEval + Custom Deterministic Grounding & SLA Guard</span>
+            <span style="font-size:0.82rem; color:#94a3b8;">Domain: <strong>Enterprise Procurement & Purchasing</strong></span><br/>
+            <span style="font-size:0.75rem; color:#64748b;">Framework: DeepEval + Deterministic Grounded Assertions</span>
         </div>
     </div>
     """,
     unsafe_allow_html=True,
 )
 
-# Sidebar controls
+# Sidebar Controls
 with st.sidebar:
-    st.markdown("### ⚙️ Test Suite Controls")
+    st.markdown("### ⚙️ Automation Controls")
     
     execution_mode = st.radio(
         "Execution Provider",
-        ["Offline Mock Engine (Deterministic)", "Live LLM API (OpenAI-compatible)"],
+        ["Deterministic Mock Engine (Offline)", "Live OpenAI LLM API"],
         index=0,
-        help="Mock engine requires zero API keys and produces deterministic, instant evaluation results.",
+        help="Deterministic mock engine runs offline with zero external API keys and guarantees reproducible testing.",
     )
     use_mock = "Mock" in execution_mode
     
     model_name = "gpt-4o-mini"
     if not use_mock:
-        model_name = st.text_input("Model Identifier", value="gpt-4o-mini")
+        model_name = st.text_input("Model ID", value="gpt-4o-mini")
         api_key_input = st.text_input("OpenAI API Key", type="password", placeholder="sk-...")
         if api_key_input:
             os.environ["OPENAI_API_KEY"] = api_key_input
 
-    # Category Selector
-    all_categories = [
+    categories = [
         "All Categories",
-        "smart_home_factual",
-        "general_factual",
-        "context_grounded",
-        "hallucination_detection",
-        "multi_turn_context",
-        "security_prompt_injection",
-        "security_pii_leakage",
-        "security_unauthorized_device_control",
-        "refusal_behavior",
-        "incorrect_answer_scenario",
+        "correctness",
+        "hallucination",
+        "security",
+        "api_testing",
+        "performance",
     ]
-    selected_cat = st.selectbox("Category Filter", all_categories, index=0)
+    selected_cat = st.selectbox("Category Filter", categories, index=0)
 
-    # Flaw injection toggle for testing the tester
-    simulate_flaws = st.checkbox(
+    simulate_flaw = st.checkbox(
         "Simulate Flaw Injection (Negative QA)",
         value=False,
-        help="Intentionally triggers flawed responses on trap questions to verify hallucination and safety detection alerts.",
+        help="Simulates hallucinated confirmations on nonexistent purchase orders to test the framework's failure detection.",
     )
 
     st.markdown("---")
-    st.markdown("### 📊 Test Dataset")
-    try:
-        cases = runner.load_test_cases()
-        st.caption(f"Loaded **{len(cases)}** verified golden test cases from `data/golden_dataset.json`.")
-    except Exception as e:
-        st.error(f"Error loading dataset: {e}")
-
-    st.markdown("---")
-    st.markdown(
-        """
-        <div style="font-size: 0.75rem; color: #64748b; line-height: 1.4;">
-            <strong>AI Quality Engineer Application</strong><br/>
-            Atomberg Technologies<br/>
-            Evaluation Metrics: DeepEval, Token Containment, Semantic Sim, Regex Guardrails.
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
-# Tabs for Main View
-tab_overview, tab_execution, tab_security, tab_regression = st.tabs([
-    "📈 Overview & Metrics",
-    "🚀 Test Suite Execution",
-    "🔒 Security & Jailbreak Defense",
-    "📉 Regression Analysis",
-])
+    st.markdown("### 📊 Golden Dataset")
+    total_golden = len(procurement_store.test_cases)
+    st.caption(f"Loaded **{total_golden}** test cases from `data/procurement.json`.")
+    st.caption(f"• **{len(procurement_store.purchase_requisitions)}** Purchase Requisitions\n• **{len(procurement_store.purchase_orders)}** Purchase Orders\n• **{len(procurement_store.vendors)}** Approved Vendors\n• **{len(procurement_store.policies)}** Procurement Policies")
 
 
 # Helper function to run tests
-def execute_test_run(cat_filter, mock_mode, model_id, sim_flaws):
-    categories = None if cat_filter == "All Categories" else [cat_filter]
+def execute_suite(cat_filter, mock_mode, model_id, sim_flaw):
+    cat_list = None if cat_filter == "All Categories" else [cat_filter]
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    run_result = loop.run_until_complete(
+    run_res = loop.run_until_complete(
         runner.run_suite(
-            categories=categories,
+            categories=cat_list,
             use_mock=mock_mode,
             model=model_id,
-            simulate_flaws=sim_flaws,
+            simulate_flaw=sim_flaw,
         )
     )
     loop.close()
-    return run_result
+    return run_res
 
 
-# Fetch latest run or auto-initialize one if none exists
+# Fetch or execute initial run
 latest_run = runner.get_latest_run()
 if not latest_run:
-    # Run initial baseline test suite silently
-    latest_run = execute_test_run("All Categories", True, "mock-aura", False)
+    latest_run = execute_suite("All Categories", True, "mock-procure", False)
+
+
+# Tabs
+tab_overview, tab_execution, tab_security, tab_explorer, tab_live_chat = st.tabs([
+    "📈 Overview & Metrics",
+    "🚀 Test Suite Execution",
+    "🔒 Security & Policy Defense",
+    "🗂️ Procurement Data Explorer",
+    "💬 Interactive Chatbot",
+])
 
 
 # -----------------------------------------------------------------------------
 # TAB 1: OVERVIEW & METRICS
 # -----------------------------------------------------------------------------
 with tab_overview:
-    # Key Metric Cards
     c1, c2, c3, c4, c5, c6 = st.columns(6)
-    
     with c1:
         st.markdown(
             f"""
@@ -283,14 +231,14 @@ with tab_overview:
             unsafe_allow_html=True,
         )
     with c3:
-        fail_color = "#f87171" if latest_run.failed_tests > 0 else "#94a3b8"
-        border_color = "#ef4444" if latest_run.failed_tests > 0 else "#1f2937"
+        fail_c = "#f87171" if latest_run.failed_tests > 0 else "#94a3b8"
+        border_c = "#ef4444" if latest_run.failed_tests > 0 else "#1e293b"
         st.markdown(
             f"""
-            <div class="metric-card" style="border-left: 3px solid {border_color};">
+            <div class="metric-card" style="border-left: 3px solid {border_c};">
                 <div class="metric-label">Failed Tests</div>
-                <div class="metric-val" style="color: {fail_color};">{latest_run.failed_tests}</div>
-                <div class="metric-sub">Flaws / breaches flagged</div>
+                <div class="metric-val" style="color: {fail_c};">{latest_run.failed_tests}</div>
+                <div class="metric-sub">Issues flagged</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -301,7 +249,7 @@ with tab_overview:
             <div class="metric-card">
                 <div class="metric-label">Pass Rate</div>
                 <div class="metric-val" style="color: #38bdf8;">{latest_run.pass_rate}%</div>
-                <div class="metric-sub">Target SLA: ≥ 90%</div>
+                <div class="metric-sub">Target SLA: ≥ 95%</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -312,19 +260,19 @@ with tab_overview:
             <div class="metric-card">
                 <div class="metric-label">Avg Latency</div>
                 <div class="metric-val">{latest_run.avg_latency_ms:.0f} <span style="font-size:0.9rem; color:#94a3b8;">ms</span></div>
-                <div class="metric-sub">SLA Threshold: 3000ms</div>
+                <div class="metric-sub">SLA Threshold: 2500ms</div>
             </div>
             """,
             unsafe_allow_html=True,
         )
     with c6:
-        halluc_color = "#f87171" if latest_run.hallucination_rate > 0 else "#34d399"
+        h_color = "#f87171" if latest_run.hallucination_rate > 0 else "#34d399"
         st.markdown(
             f"""
             <div class="metric-card">
                 <div class="metric-label">Hallucination</div>
-                <div class="metric-val" style="color: {halluc_color};">{latest_run.hallucination_rate}%</div>
-                <div class="metric-sub">Ungrounded rate</div>
+                <div class="metric-val" style="color: {h_color};">{latest_run.hallucination_rate}%</div>
+                <div class="metric-sub">Unverified claims</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -332,12 +280,11 @@ with tab_overview:
 
     st.markdown("<br/>", unsafe_allow_html=True)
 
-    # Charts Row
+    # Charts
     ch1, ch2 = st.columns(2)
-    
     with ch1:
-        st.markdown("##### 📊 Results by Test Category")
-        df_results = pd.DataFrame([
+        st.markdown("##### 📊 Results Breakdown by Test Category")
+        df_res = pd.DataFrame([
             {
                 "Category": r.category.replace("_", " ").title(),
                 "Status": "Passed" if r.passed else "Failed",
@@ -345,10 +292,10 @@ with tab_overview:
             }
             for r in latest_run.results
         ])
-        if not df_results.empty:
-            cat_summary = df_results.groupby(["Category", "Status"]).count().reset_index()
+        if not df_res.empty:
+            summary_cat = df_res.groupby(["Category", "Status"]).count().reset_index()
             fig_cat = px.bar(
-                cat_summary,
+                summary_cat,
                 x="Category",
                 y="Count",
                 color="Status",
@@ -364,28 +311,28 @@ with tab_overview:
                 yaxis=dict(showgrid=True, gridcolor="#1e293b"),
                 margin=dict(l=20, r=20, t=20, b=50),
             )
-            st.plotly_chart(fig_cat, use_container_width=True)
+            st.plotly_chart(fig_cat, width="stretch")
 
     with ch2:
         st.markdown("##### ⏱️ Response Latency Distribution (ms)")
-        lat_df = pd.DataFrame([
+        df_lat = pd.DataFrame([
             {
                 "Test ID": r.test_id,
                 "Latency (ms)": r.latency_ms,
-                "Passed": "Pass" if r.passed else "Fail",
+                "Status": "Pass" if r.passed else "Fail",
             }
             for r in latest_run.results
         ])
-        if not lat_df.empty:
+        if not df_lat.empty:
             fig_lat = px.bar(
-                lat_df,
+                df_lat,
                 x="Test ID",
                 y="Latency (ms)",
-                color="Passed",
+                color="Status",
                 color_discrete_map={"Pass": "#38bdf8", "Fail": "#f43f5e"},
                 height=320,
             )
-            fig_lat.add_hline(y=2500, line_dash="dash", line_color="#f59e0b", annotation_text="Standard SLA (2500ms)")
+            fig_lat.add_hline(y=2000, line_dash="dash", line_color="#f59e0b", annotation_text="Standard SLA (2000ms)")
             fig_lat.update_layout(
                 paper_bgcolor="rgba(0,0,0,0)",
                 plot_bgcolor="rgba(0,0,0,0)",
@@ -394,7 +341,7 @@ with tab_overview:
                 yaxis=dict(showgrid=True, gridcolor="#1e293b"),
                 margin=dict(l=20, r=20, t=20, b=50),
             )
-            st.plotly_chart(fig_lat, use_container_width=True)
+            st.plotly_chart(fig_lat, width="stretch")
 
 
 # -----------------------------------------------------------------------------
@@ -402,122 +349,111 @@ with tab_overview:
 # -----------------------------------------------------------------------------
 with tab_execution:
     st.markdown("##### 🚀 Test Suite Execution Controller")
-    
-    col_run_btn, col_info = st.columns([1, 3])
-    with col_run_btn:
-        run_now = st.button("▶️ Run Test Suite", type="primary", use_container_width=True)
-    with col_info:
-        st.info(f"Target: **{selected_cat}** | Mode: **{'Offline Mock' if use_mock else f'Live API ({model_name})'}** | Flaw Simulation: **{simulate_flaws}**")
+    c_btn, c_banner = st.columns([1, 3])
+    with c_btn:
+        run_now = st.button("▶️ Run Test Suite", type="primary", width="stretch")
+    with c_banner:
+        st.info(f"Target: **{selected_cat}** | Mode: **{'Deterministic Mock' if use_mock else f'Live API ({model_name})'}** | Flaw Simulation: **{simulate_flaw}**")
 
     if run_now:
-        with st.spinner("Executing automated test suite and evaluating responses..."):
-            progress_bar = st.progress(0)
-            for p in range(1, 80, 20):
-                progress_bar.progress(p)
-            new_run = execute_test_run(selected_cat, use_mock, model_name, simulate_flaws)
-            progress_bar.progress(100)
-            st.success(f"Execution complete! Run ID: `{new_run.run_id}` | Pass Rate: **{new_run.pass_rate}%**")
+        with st.spinner("Executing procurement test suite and evaluating responses..."):
+            pbar = st.progress(0)
+            for step in range(20, 90, 20):
+                pbar.progress(step)
+            new_run = execute_suite(selected_cat, use_mock, model_name, simulate_flaw)
+            pbar.progress(100)
+            st.success(f"Executed Run `{new_run.run_id}` | Pass Rate: **{new_run.pass_rate}%** ({new_run.passed_tests}/{new_run.total_tests})")
             st.rerun()
 
     st.markdown("---")
-    st.markdown("##### 📋 Test Execution Results")
+    st.markdown("##### 📋 Execution Results")
 
-    # Filter controls for table
-    filter_col1, filter_col2 = st.columns([1, 2])
-    with filter_col1:
-        status_filter = st.selectbox("Filter Status", ["All", "Passed Only", "Failed Only"], index=0)
-    with filter_col2:
-        search_term = st.text_input("Search Prompt or Name", placeholder="e.g. sleep mode, door lock, injection...")
+    col_flt1, col_flt2 = st.columns([1, 2])
+    with col_flt1:
+        status_choice = st.selectbox("Status Filter", ["All", "Passed Only", "Failed Only"], index=0)
+    with col_flt2:
+        search_kw = st.text_input("Search Test Name / Prompt", placeholder="e.g. PR-1024, PO-2045, injection, budget...")
 
-    display_results = latest_run.results
-    if status_filter == "Passed Only":
-        display_results = [r for r in display_results if r.passed]
-    elif status_filter == "Failed Only":
-        display_results = [r for r in display_results if not r.passed]
+    filtered_results = latest_run.results
+    if status_choice == "Passed Only":
+        filtered_results = [r for r in filtered_results if r.passed]
+    elif status_choice == "Failed Only":
+        filtered_results = [r for r in filtered_results if not r.passed]
 
-    if search_term:
-        term = search_term.lower()
-        display_results = [
-            r for r in display_results
-            if term in r.prompt.lower() or term in r.name.lower() or term in r.category.lower()
+    if search_kw:
+        skw = search_kw.lower()
+        filtered_results = [
+            r for r in filtered_results
+            if skw in r.name.lower() or skw in r.prompt.lower() or skw in r.category.lower()
         ]
 
-    # Render results in clean accordion list
-    st.markdown(f"Displaying **{len(display_results)}** of **{latest_run.total_tests}** test results:")
-    for res in display_results:
-        status_badge = "✅ PASSED" if res.passed else "❌ FAILED"
+    st.markdown(f"Showing **{len(filtered_results)}** of **{latest_run.total_tests}** test results:")
+
+    for res in filtered_results:
+        badge = "✅ PASSED" if res.passed else "❌ FAILED"
         halluc_badge = " [⚠️ HALLUCINATED]" if res.is_hallucinated else ""
         sec_badge = " [🚨 SECURITY ALERT]" if res.security_incident_detected else ""
-        
-        with st.expander(f"{res.test_id} — {res.name} | {status_badge}{halluc_badge}{sec_badge} ({res.latency_ms:.1f}ms)"):
-            c_det1, c_det2 = st.columns([1, 1])
-            with c_det1:
-                st.markdown("**Prompt:**")
+
+        with st.expander(f"{res.test_id} — {res.name} | {badge}{halluc_badge}{sec_badge} ({res.latency_ms:.1f}ms)"):
+            c_left, c_right = st.columns(2)
+            with c_left:
+                st.markdown("**User Query / Prompt:**")
                 st.code(res.prompt, language=None)
-                if res.context:
-                    st.markdown("**Context / Conversation History:**")
-                    st.code(res.context, language=None)
-                st.markdown("**Expected Golden Answer / Policy:**")
+                st.markdown("**Expected Answer / Policy Rule:**")
                 st.code(res.expected_answer, language=None)
-            
-            with c_det2:
-                st.markdown("**Actual LLM Response:**")
+            with c_right:
+                st.markdown("**Chatbot Actual Response:**")
                 st.code(res.actual_response, language=None)
-                
-                st.markdown("**Metric Scores & Reasonings:**")
-                for m_name, m_val in res.metrics.items():
-                    m_icon = "🟢" if m_val.passed else "🔴"
-                    st.markdown(f"- {m_icon} **{m_name}**: `{m_val.score:.2f}` (Threshold: {m_val.threshold}) — *{m_val.reasoning}*")
+                st.markdown("**Evaluation Breakdown:**")
+                for m_key, m_obj in res.metrics.items():
+                    m_icon = "🟢" if m_obj.passed else "🔴"
+                    st.markdown(f"- {m_icon} **{m_key}**: `{m_obj.score:.2f}` (Threshold: {m_obj.threshold}) — *{m_obj.reasoning}*")
 
 
 # -----------------------------------------------------------------------------
-# TAB 3: SECURITY & JAILBREAK DEFENSE
+# TAB 3: SECURITY & COMPLIANCE DEFENSE
 # -----------------------------------------------------------------------------
 with tab_security:
-    st.markdown("##### 🔒 Adversarial Security & Defensive Evaluation")
-    st.caption("Validates defensive posture against prompt injections, DAN jailbreaks, credential/PII leaks, and unauthorized IoT physical actuators.")
+    st.markdown("##### 🔒 Prompt Injection, Jailbreak & Procurement Policy Defense")
+    st.caption("Validates defensive posture against attempts to extract system prompts, bypass approval thresholds, leak confidential bidding margins, or manipulate database records.")
 
-    security_results = [
-        r for r in latest_run.results
-        if "security" in r.category or "refusal" in r.category or getattr(r, "security_sensitive", False)
-    ]
+    sec_cases = [r for r in latest_run.results if r.category == "security" or r.security_sensitive]
+    sec_passed = sum(1 for r in sec_cases if r.passed)
+    sec_breaches = len(sec_cases) - sec_passed
+    sec_rate = round((sec_passed / len(sec_cases)) * 100.0, 1) if sec_cases else 100.0
 
-    sec_c1, sec_c2, sec_c3 = st.columns(3)
-    sec_passed = sum(1 for r in security_results if r.passed)
-    sec_breaches = len(security_results) - sec_passed
-    sec_pass_rate = round((sec_passed / len(security_results)) * 100.0, 1) if security_results else 100.0
-
-    with sec_c1:
+    sc1, sc2, sc3 = st.columns(3)
+    with sc1:
         st.markdown(
             f"""
             <div class="metric-card">
                 <div class="metric-label">Security Test Scenarios</div>
-                <div class="metric-val">{len(security_results)}</div>
-                <div class="metric-sub">Adversarial & PII boundaries</div>
+                <div class="metric-val">{len(sec_cases)}</div>
+                <div class="metric-sub">Adversarial test cases</div>
             </div>
             """,
             unsafe_allow_html=True,
         )
-    with sec_c2:
-        sec_stat_color = "#34d399" if sec_breaches == 0 else "#f87171"
+    with sc2:
+        sec_color = "#34d399" if sec_breaches == 0 else "#f87171"
         st.markdown(
             f"""
-            <div class="metric-card" style="border-left: 3px solid {sec_stat_color};">
+            <div class="metric-card" style="border-left: 3px solid {sec_color};">
                 <div class="metric-label">Defensive Pass Rate</div>
-                <div class="metric-val" style="color: {sec_stat_color};">{sec_pass_rate}%</div>
-                <div class="metric-sub">Zero-tolerance for PII/bypasses</div>
+                <div class="metric-val" style="color: {sec_color};">{sec_rate}%</div>
+                <div class="metric-sub">Zero tolerance for bypasses</div>
             </div>
             """,
             unsafe_allow_html=True,
         )
-    with sec_c3:
-        b_color = "#f87171" if sec_breaches > 0 else "#94a3b8"
+    with sc3:
+        b_c = "#f87171" if sec_breaches > 0 else "#94a3b8"
         st.markdown(
             f"""
             <div class="metric-card">
-                <div class="metric-label">Security Breaches Detected</div>
-                <div class="metric-val" style="color: {b_color};">{sec_breaches}</div>
-                <div class="metric-sub">Compromised safety boundaries</div>
+                <div class="metric-label">Security Breaches</div>
+                <div class="metric-val" style="color: {b_c};">{sec_breaches}</div>
+                <div class="metric-sub">Vulnerabilities detected</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -525,96 +461,88 @@ with tab_security:
 
     st.markdown("<br/>", unsafe_allow_html=True)
 
-    sec_table_data = []
-    for r in security_results:
-        sec_table_data.append({
+    sec_data = []
+    for r in sec_cases:
+        sec_data.append({
             "Test ID": r.test_id,
-            "Attack Vector": r.category.replace("security_", "").replace("_", " ").title(),
-            "Scenario": r.name,
-            "Defense Upheld": "🛡️ Defended (Pass)" if r.passed else "🚨 Breached (Fail)",
-            "Guardrail Diagnostic": r.metrics.get("security_guardrail", r.metrics.get("answer_correctness")).reasoning if r.metrics else "Evaluated",
+            "Attack Vector": r.name,
+            "Prompt Injection Payload": r.prompt[:80] + ("..." if len(r.prompt) > 80 else ""),
+            "Defense Status": "🛡️ Defended (Passed)" if r.passed else "🚨 Breached (Failed)",
+            "Guardrail Evaluation": r.metrics.get("security_guardrail", r.metrics.get("answer_correctness")).reasoning if r.metrics else "Evaluated",
         })
-    st.dataframe(pd.DataFrame(sec_table_data), use_container_width=True, hide_index=True)
+    st.dataframe(pd.DataFrame(sec_data), width="stretch", hide_index=True)
 
 
 # -----------------------------------------------------------------------------
-# TAB 4: REGRESSION ANALYSIS
+# TAB 4: PROCUREMENT DATA EXPLORER
 # -----------------------------------------------------------------------------
-with tab_regression:
-    st.markdown("##### 📉 Automated Regression Detection")
-    st.caption("Compares current test execution with previous baseline to proactively detect quality degradation and latency increases.")
+with tab_explorer:
+    st.markdown("##### 🗂️ Grounded Procurement Knowledge Base")
+    st.caption("Inspect the active mock procurement database containing purchase requisitions, orders, vendors, budgets, and corporate compliance policies.")
 
-    reg_report = regression_detector.evaluate_latest_regression()
+    e_tabs = st.tabs(["Purchase Requisitions", "Purchase Orders", "Approved Vendors", "Department Budgets", "Procurement Policies"])
+    
+    with e_tabs[0]:
+        df_pr = pd.DataFrame(procurement_store.purchase_requisitions)
+        df_pr["estimated_cost"] = df_pr["estimated_cost"].apply(lambda x: f"₹{format_inr(x)}")
+        st.dataframe(df_pr, width="stretch", hide_index=True)
 
-    if not reg_report.has_comparison:
-        st.warning(f"ℹ️ {reg_report.status_summary}")
-        st.info("Execute another test run from the sidebar or Test Suite tab to perform an automated regression diff.")
-    else:
-        # Comparison Metrics
-        r_c1, r_c2, r_c3, r_c4 = st.columns(4)
-        with r_c1:
-            st.markdown(
-                f"""
-                <div class="metric-card">
-                    <div class="metric-label">Current Pass Rate</div>
-                    <div class="metric-val">{reg_report.current_pass_rate}%</div>
-                    <div class="metric-sub">Run: {reg_report.current_run_id[:14]}...</div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-        with r_c2:
-            st.markdown(
-                f"""
-                <div class="metric-card">
-                    <div class="metric-label">Previous Pass Rate</div>
-                    <div class="metric-val">{reg_report.previous_pass_rate}%</div>
-                    <div class="metric-sub">Run: {reg_report.previous_run_id[:14]}...</div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-        with r_c3:
-            delta = reg_report.pass_rate_delta or 0.0
-            delta_color = "#34d399" if delta >= 0 else "#f87171"
-            st.markdown(
-                f"""
-                <div class="metric-card" style="border-left: 3px solid {delta_color};">
-                    <div class="metric-label">Pass Rate Delta</div>
-                    <div class="metric-val" style="color: {delta_color};">{delta:+0.2f}%</div>
-                    <div class="metric-sub">Quality difference</div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-        with r_c4:
-            lat_delta = reg_report.latency_delta_ms or 0.0
-            lat_color = "#f87171" if reg_report.latency_increased else "#38bdf8"
-            st.markdown(
-                f"""
-                <div class="metric-card">
-                    <div class="metric-label">Latency Delta</div>
-                    <div class="metric-val" style="color: {lat_color};">{lat_delta:+0.1f} ms</div>
-                    <div class="metric-sub">Response timing delta</div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+    with e_tabs[1]:
+        df_po = pd.DataFrame(procurement_store.purchase_orders)
+        df_po["amount"] = df_po["amount"].apply(lambda x: f"₹{format_inr(x)}")
+        st.dataframe(df_po, width="stretch", hide_index=True)
 
-        st.markdown("<br/>", unsafe_allow_html=True)
+    with e_tabs[2]:
+        df_v = pd.DataFrame(procurement_store.vendors)
+        st.dataframe(df_v, width="stretch", hide_index=True)
 
-        if reg_report.quality_degraded:
-            st.error(f"⚠️ **Regression Alert:** {reg_report.status_summary}")
-        else:
-            st.success(f"✅ **Regression Check Passed:** {reg_report.status_summary}")
+    with e_tabs[3]:
+        budget_data = []
+        for dept, b in procurement_store.budgets.items():
+            budget_data.append({
+                "Department": dept,
+                "Allocated Budget": f"₹{format_inr(b['allocated'])}",
+                "Spent Budget": f"₹{format_inr(b['spent'])}",
+                "Remaining Balance": f"₹{format_inr(b['remaining'])}",
+                "Utilization": f"{(b['spent']/b['allocated'])*100:.1f}%",
+            })
+        st.dataframe(pd.DataFrame(budget_data), width="stretch", hide_index=True)
 
-        if reg_report.newly_failing_tests:
-            st.markdown("##### 🚨 Newly Failing Tests (Broken in Current Run):")
-            for nf in reg_report.newly_failing_tests:
-                st.markdown(f"- 🔴 `{nf}`")
+    with e_tabs[4]:
+        df_pol = pd.DataFrame(procurement_store.policies)
+        st.dataframe(df_pol, width="stretch", hide_index=True)
 
-        if reg_report.newly_passing_tests:
-            st.markdown("##### 🎉 Newly Passing Tests (Fixed in Current Run):")
-            for np_test in reg_report.newly_passing_tests:
-                st.markdown(f"- 🟢 `{np_test}`")
 
+# -----------------------------------------------------------------------------
+# TAB 5: INTERACTIVE CHATBOT
+# -----------------------------------------------------------------------------
+with tab_live_chat:
+    st.markdown("##### 💬 Test the Procurement Chatbot Live")
+    st.caption("Ask questions about requisitions (PR-1024), orders (PO-2045), vendors, budgets, or test security guardrails.")
+
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = [
+            {"role": "assistant", "content": "Hello! I am ProcureQA, your enterprise procurement assistant. Ask me about purchase requisitions, purchase orders, vendor quotations, budgets, or approval policies."}
+        ]
+
+    for msg in st.session_state.chat_history:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+
+    user_query = st.chat_input("Ask a procurement question (e.g. 'What is the status of PR-1024?')...")
+    if user_query:
+        st.session_state.chat_history.append({"role": "user", "content": user_query})
+        with st.chat_message("user"):
+            st.markdown(user_query)
+
+        with st.chat_message("assistant"):
+            with st.spinner("Consulting procurement database..."):
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                ans, lat, sources = loop.run_until_complete(
+                    chatbot.answer_query(prompt=user_query)
+                )
+                loop.close()
+                st.markdown(ans)
+                st.caption(f"⏱️ Response latency: `{lat:.1f}ms` | Sources: {', '.join(sources)}")
+                st.session_state.chat_history.append({"role": "assistant", "content": ans})
