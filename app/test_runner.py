@@ -12,7 +12,7 @@ from app.procurement_data import procurement_store
 
 class TestRunner:
     """
-    Automated Test Runner for Procurement Chatbot.
+    Automated Test Runner for Procurement Chatbot powered by Groq.
     Loads procurement golden test cases, triggers chatbot, executes evaluations,
     and stores structured audit reports.
     """
@@ -52,12 +52,11 @@ class TestRunner:
         test_cases: Optional[List[TestCase]] = None,
         categories: Optional[List[str]] = None,
         test_ids: Optional[List[str]] = None,
-        use_mock: Optional[bool] = None,
         model: Optional[str] = None,
         simulate_flaw: bool = False,
     ) -> TestSuiteRun:
-        if use_mock is not None or model is not None:
-            self.chatbot = ProcurementChatbot(use_mock=use_mock, model=model)
+        if model is not None:
+            self.chatbot = ProcurementChatbot(model=model)
 
         cases_to_run = test_cases or self.load_test_cases(categories=categories, test_ids=test_ids)
         if not cases_to_run:
@@ -111,7 +110,6 @@ class TestRunner:
             run_id=run_id,
             timestamp=timestamp,
             model_name=self.chatbot.model,
-            is_mock=self.chatbot.use_mock,
             total_tests=total,
             passed_tests=passed,
             failed_tests=failed,

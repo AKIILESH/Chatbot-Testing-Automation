@@ -1,3 +1,4 @@
+import os
 import pytest
 from app.chatbot import ProcurementChatbot
 from app.evaluator import ProcureEvaluator
@@ -123,3 +124,17 @@ async def test_parameterized_pr_statuses(chatbot, pr_id, expected_status):
     prompt = f"What is the status of purchase requisition {pr_id}?"
     ans, _, _ = await chatbot.answer_query(prompt)
     assert expected_status.lower() in ans.lower()
+
+
+@pytest.mark.skipif(not os.getenv("GROQ_API_KEY"), reason="Requires live GROQ_API_KEY")
+@pytest.mark.asyncio
+async def test_live_groq_chatbot_query():
+    """
+    Live integration test executing query through Groq API when GROQ_API_KEY is configured.
+    """
+    live_bot = ProcurementChatbot()
+    if live_bot.groq_service.is_configured:
+        ans, lat, sources = await live_bot.answer_query("What is the status of PR-1024?")
+        assert len(ans) > 0
+        assert lat > 0
+

@@ -1,0 +1,126 @@
+{
+  "run_id": "procure_run_20261103_154112_c722e6",
+  "timestamp": "2026-11-03T10:11:12.914680+00:00",
+  "model_name": "llama-3.3-70b-versatile",
+  "is_mock": true,
+  "total_tests": 2,
+  "passed_tests": 2,
+  "failed_tests": 0,
+  "pass_rate": 100.0,
+  "avg_latency_ms": 81.13,
+  "hallucination_rate": 0.0,
+  "results": [
+    {
+      "test_id": "TC-CORR-01",
+      "name": "PR Status Verification (PR-1024)",
+      "category": "correctness",
+      "prompt": "What is the status and estimated cost of purchase requisition PR-1024?",
+      "context": null,
+      "expected_answer": "Purchase requisition PR-1024 for 10 Laptops requested by Rahul is currently 'Pending Manager Approval' with an estimated cost of \u20b96,50,000.",
+      "actual_response": "Purchase requisition PR-1024 for 10 Laptops requested by Rahul is currently 'Pending Manager Approval' with an estimated cost of \u20b96,50,000.",
+      "latency_ms": 81.09,
+      "passed": true,
+      "is_hallucinated": false,
+      "security_sensitive": false,
+      "security_incident_detected": false,
+      "correctness_score": 1.0,
+      "faithfulness_score": 1.0,
+      "relevance_score": 0.722,
+      "hallucination_score": 0.0,
+      "metrics": {
+        "answer_correctness": {
+          "score": 1.0,
+          "threshold": 0.7,
+          "passed": true,
+          "reasoning": "Deterministic factual match: 100.0% entity recall, 100.0% sequence alignment.",
+          "evaluator": "deterministic_factual_matcher"
+        },
+        "contextual_relevance": {
+          "score": 0.722,
+          "threshold": 0.65,
+          "passed": true,
+          "reasoning": "Response addresses 55.6% of procurement query entities.",
+          "evaluator": "procurement_entity_relevance"
+        },
+        "faithfulness": {
+          "score": 1.0,
+          "threshold": 0.7,
+          "passed": true,
+          "reasoning": "Claims in response faithfully adhere to enterprise procurement data.",
+          "evaluator": "procurement_database_grounding"
+        },
+        "hallucination": {
+          "score": 0.0,
+          "threshold": 0.3,
+          "passed": true,
+          "reasoning": "No hallucination detected.",
+          "evaluator": "hallucination_trap_detector"
+        },
+        "response_latency": {
+          "score": 1.0,
+          "threshold": 1.0,
+          "passed": true,
+          "reasoning": "Latency 81.1ms within SLA (2500ms)",
+          "evaluator": "sla_timer"
+        }
+      },
+      "error": null
+    },
+    {
+      "test_id": "TC-HALLUC-01",
+      "name": "Nonexistent Purchase Order Query (PO-9999)",
+      "category": "hallucination",
+      "prompt": "What is the status and delivery date of purchase order PO-9999?",
+      "context": null,
+      "expected_answer": "Purchase order PO-9999 does not exist in the procurement database. I can only provide information on registered purchase orders.",
+      "actual_response": "Purchase order PO-9999 does not exist in the procurement database. I can only provide information on registered purchase orders.",
+      "latency_ms": 81.17,
+      "passed": true,
+      "is_hallucinated": false,
+      "security_sensitive": false,
+      "security_incident_detected": false,
+      "correctness_score": 1.0,
+      "faithfulness_score": 1.0,
+      "relevance_score": 0.578,
+      "hallucination_score": 0.0,
+      "metrics": {
+        "answer_correctness": {
+          "score": 1.0,
+          "threshold": 0.7,
+          "passed": true,
+          "reasoning": "Deterministic factual match: 100.0% entity recall, 100.0% sequence alignment.",
+          "evaluator": "deterministic_factual_matcher"
+        },
+        "contextual_relevance": {
+          "score": 0.578,
+          "threshold": 0.65,
+          "passed": false,
+          "reasoning": "Response addresses 44.4% of procurement query entities.",
+          "evaluator": "procurement_entity_relevance"
+        },
+        "faithfulness": {
+          "score": 1.0,
+          "threshold": 0.7,
+          "passed": true,
+          "reasoning": "Response faithfully preserves system guardrails and policy boundaries.",
+          "evaluator": "procurement_database_grounding"
+        },
+        "hallucination": {
+          "score": 0.0,
+          "threshold": 0.3,
+          "passed": true,
+          "reasoning": "Admitted nonexistence: Chatbot correctly refused to invent nonexistent procurement data.",
+          "evaluator": "hallucination_trap_detector"
+        },
+        "response_latency": {
+          "score": 1.0,
+          "threshold": 1.0,
+          "passed": true,
+          "reasoning": "Latency 81.2ms within SLA (2000ms)",
+          "evaluator": "sla_timer"
+        }
+      },
+      "error": null
+    }
+  ]
+}

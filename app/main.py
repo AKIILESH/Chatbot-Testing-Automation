@@ -16,9 +16,9 @@ from app.chatbot import ProcurementChatbot
 from app.test_runner import TestRunner
 
 app = FastAPI(
-    title="ProcureQA API — Enterprise Procurement Chatbot & Test Automation",
-    description="Automated LLM test automation framework evaluating correctness, hallucinations, security guardrails, and latency for enterprise procurement.",
-    version="1.0.0",
+    title="ProcureQA API — Groq-Powered Procurement Assistant & QA Testing Framework",
+    description="Production-style API for enterprise procurement chat and automated LLM quality evaluation powered by Groq.",
+    version="2.0.0",
 )
 
 app.add_middleware(
@@ -36,14 +36,15 @@ runner = TestRunner(chatbot=chatbot)
 @app.get("/health", response_model=HealthResponse, tags=["System"])
 async def health_check():
     """
-    Returns system health status, version, mock status, and total golden test cases.
+    Check application health, Groq LLM integration status, and test case availability.
     """
     total_cases = len(procurement_store.test_cases)
     return HealthResponse(
         status="healthy",
         app_name="ProcureQA",
-        version="1.0.0",
-        mock_llm_enabled=chatbot.use_mock,
+        version="2.0.0",
+        groq_configured=chatbot.groq_service.is_configured,
+        groq_model=chatbot.groq_service.model,
         total_golden_test_cases=total_cases,
         deepeval_installed=runner.evaluator.has_deepeval,
         timestamp=datetime.datetime.now(datetime.timezone.utc).isoformat(),
@@ -53,23 +54,21 @@ async def health_check():
 @app.post("/chat", response_model=ChatResponse, tags=["Chatbot"])
 async def chat(request: ChatRequest):
     """
-    Interact with the procurement chatbot to answer inquiries regarding purchase requisitions,
-    orders, vendors, budgets, and compliance policies.
+    Send a procurement question to the Groq-powered chatbot and receive an LLM-generated answer.
     """
-    if not request.message.strip():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Message cannot be empty.")
+    if not request.message or not request.message.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User query message cannot be empty or whitespace.",
+        )
 
     try:
-        active_bot = chatbot
-        if request.use_mock is not None and request.use_mock != chatbot.use_mock:
-            active_bot = ProcurementChatbot(use_mock=request.use_mock)
-
-        response_text, latency_ms, sources = await active_bot.answer_query(prompt=request.message)
+        response_text, latency_ms, sources = await chatbot.answer_query(prompt=request.message)
         return ChatResponse(
             response=response_text,
             latency_ms=latency_ms,
             sources_consulted=sources,
-            is_mock=active_bot.use_mock,
+            model=chatbot.model,
         )
     except Exception as e:
         raise HTTPException(
@@ -78,10 +77,11 @@ async def chat(request: ChatRequest):
         )
 
 
-@app.get("/procurement/requisitions", response_model=List[PurchaseRequisitionItem], tags=["Procurement Data"])
+@app.get("/requisitions", response_model=List[PurchaseRequisitionItem], tags=["Procurement Data"])
+@app.get("/procurement/requisitions", response_model=List[PurchaseRequisitionItem], tags=["Procurement Data"], include_in_schema=False)
 async def get_requisitions(status_filter: Optional[str] = Query(None, description="Optional status filter")):
     """
-    Lists enterprise purchase requisitions with optional status filtering.
+    Retrieve mock purchase requisition records.
     """
     prs = procurement_store.purchase_requisitions
     if status_filter:
@@ -89,10 +89,11 @@ async def get_requisitions(status_filter: Optional[str] = Query(None, descriptio
     return prs
 
 
-@app.get("/procurement/orders", response_model=List[PurchaseOrderItem], tags=["Procurement Data"])
-async def get_orders(vendor_filter: Optional[str] = Query(None, description="Optional vendor name filter")):
+@app.get("/purchase-orders", response_model=List[PurchaseOrderItem], tags=["Procurement Data"])
+@app.get("/procurement/orders", response_model=List[PurchaseOrderItem], tags=["Procurement Data"], include_in_schema=False)
+async def get_purchase_orders(vendor_filter: Optional[str] = Query(None, description="Optional vendor name filter")):
     """
-    Lists purchase orders with optional vendor name filtering.
+    Retrieve mock purchase orders.
     """
     pos = procurement_store.purchase_orders
     if vendor_filter:
@@ -104,15 +105,13 @@ async def get_orders(vendor_filter: Optional[str] = Query(None, description="Opt
 @app.post("/run-tests", response_model=TestSuiteRun, status_code=status.HTTP_201_CREATED, tags=["Test Automation"])
 async def run_tests(payload: Optional[RunTestsRequest] = None):
     """
-    Triggers automated LLM test suite execution across correctness, hallucination,
-    security, API, and performance categories.
+    Execute the automated quality test suite across correctness, hallucination, security, and performance.
     """
     req = payload or RunTestsRequest()
     try:
         suite_run = await runner.run_suite(
             categories=req.categories,
             test_ids=req.test_ids,
-            use_mock=req.use_mock,
             model=req.model,
         )
         return suite_run
@@ -126,9 +125,9 @@ async def run_tests(payload: Optional[RunTestsRequest] = None):
 
 
 @app.get("/results", response_model=List[TestSuiteRun], tags=["Test Automation"])
-async def get_all_results():
+async def get_results():
     """
-    Retrieves historical test execution runs.
+    Return all historical and latest test results.
     """
     return runner.list_all_runs()
 
@@ -136,7 +135,7 @@ async def get_all_results():
 @app.get("/results/{run_id}", response_model=TestSuiteRun, tags=["Test Automation"])
 async def get_result_by_id(run_id: str):
     """
-    Retrieves detailed results for a specific test run ID.
+    Return detailed results for a specific test run ID.
     """
     run = runner.get_run_by_id(run_id)
     if not run:

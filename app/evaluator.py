@@ -162,6 +162,13 @@ class ProcureEvaluator:
 
         score = min(1.0, (0.50 * overlap) + (0.30 * seq_ratio) + (0.20 * key_bonus))
 
+        # Check for financial amount discrepancies
+        exp_amounts = set(re.findall(r"₹[\d,]+", exp_clean))
+        act_amounts = set(re.findall(r"₹[\d,]+", act_clean))
+        if exp_amounts and act_amounts and not exp_amounts.intersection(act_amounts):
+            score = max(0.0, score - 0.45)
+            return score, f"Financial mismatch detected: expected {list(exp_amounts)[0]}, got {list(act_amounts)[0]}."
+
         # Check for direct contradictions (e.g. expected says rejected but actual says approved)
         if "rejected" in exp_clean and "approved" in act_clean and "not approved" not in act_clean:
             score = max(0.0, score - 0.5)

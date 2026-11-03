@@ -49,3 +49,13 @@ async def test_parameterized_performance_benchmarks(chatbot, evaluator, query, s
     """
     ans, latency_ms, _ = await chatbot.answer_query(query)
     assert latency_ms <= sla_ms, f"Query '{query}' took {latency_ms}ms, exceeding SLA limit {sla_ms}ms"
+
+
+def test_groq_service_unconfigured_error_handling():
+    """
+    Validates that GroqService handles missing credentials gracefully without crashing.
+    """
+    from app.groq_service import GroqService
+    svc = GroqService(api_key="")
+    assert svc.is_configured is False
+

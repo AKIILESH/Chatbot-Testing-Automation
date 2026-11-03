@@ -19,7 +19,7 @@ def test_post_chat_valid(client: TestClient):
     """
     Validates POST /chat with valid procurement message.
     """
-    payload = {"message": "What is the status of PR-1024?", "use_mock": True}
+    payload = {"message": "What is the status of PR-1024?"}
     response = client.post("/chat", json=payload)
     assert response.status_code == 200
     data = response.json()
@@ -46,32 +46,32 @@ def test_post_chat_missing_required_fields(client: TestClient):
 
 def test_get_procurement_requisitions(client: TestClient):
     """
-    Validates GET /procurement/requisitions returns requisition list and supports status filtering.
+    Validates GET /requisitions (and alias /procurement/requisitions) returns requisition list.
     """
-    response = client.get("/procurement/requisitions")
+    response = client.get("/requisitions")
     assert response.status_code == 200
     prs = response.json()
     assert len(prs) >= 5
     assert any(pr["id"] == "PR-1024" for pr in prs)
 
     # Filtered
-    filtered = client.get("/procurement/requisitions?status_filter=Approved")
+    filtered = client.get("/requisitions?status_filter=Approved")
     assert filtered.status_code == 200
     assert all(pr["status"] == "Approved" for pr in filtered.json())
 
 
 def test_get_procurement_orders(client: TestClient):
     """
-    Validates GET /procurement/orders returns orders and supports vendor filtering.
+    Validates GET /purchase-orders (and alias /procurement/orders) returns orders.
     """
-    response = client.get("/procurement/orders")
+    response = client.get("/purchase-orders")
     assert response.status_code == 200
     pos = response.json()
     assert len(pos) >= 4
     assert any(po["id"] == "PO-2045" for po in pos)
 
     # Filtered
-    v_filtered = client.get("/procurement/orders?vendor_filter=TechSource")
+    v_filtered = client.get("/purchase-orders?vendor_filter=TechSource")
     assert v_filtered.status_code == 200
     assert all("TechSource" in po["vendor_name"] for po in v_filtered.json())
 
@@ -81,7 +81,6 @@ def test_run_tests_endpoint(client: TestClient):
     Validates POST /run-tests triggers automated test execution and returns HTTP 201 Created.
     """
     payload = {
-        "use_mock": True,
         "test_ids": ["TC-CORR-01", "TC-HALLUC-01"],
     }
     response = client.post("/run-tests", json=payload)
@@ -102,3 +101,12 @@ def test_get_results_and_not_found(client: TestClient):
 
     notFound = client.get("/results/nonexistent_run_99999")
     assert notFound.status_code == 404
+
+
+def test_invalid_requisition_filter_empty(client: TestClient):
+    """
+    Validates filtering requisitions with nonexistent status returns empty list.
+    """
+    resp = client.get("/requisitions?status_filter=NonExistentStatus")
+    assert resp.status_code == 200
+    assert resp.json() == []

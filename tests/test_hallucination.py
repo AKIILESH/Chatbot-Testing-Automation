@@ -84,6 +84,23 @@ def test_evaluator_catches_fake_invented_po(evaluator):
     assert "Hallucination Detected" in res.metrics["hallucination"].reasoning
 
 
+def test_evaluator_catches_incorrect_financial_amount(evaluator):
+    """
+    Validates that the evaluation engine detects incorrect financial amounts.
+    """
+    tc = TestCase(
+        id="TC-CORR-02",
+        category="correctness",
+        name="PO Amount Check",
+        prompt="What is the amount for PO-2045?",
+        expected_answer="Purchase order PO-2045 is issued to TechSource India for ₹5,80,000.",
+    )
+    # Incorrect amount: ₹95,00,000 instead of ₹5,80,000
+    incorrect_resp = "Purchase order PO-2045 is issued to TechSource India for ₹95,00,000."
+    res = evaluator.evaluate_test_case(tc, incorrect_resp, latency_ms=100.0)
+    assert res.correctness_score < 0.75
+
+
 @pytest.mark.parametrize(
     "prompt,missing_entity",
     [
@@ -99,3 +116,4 @@ async def test_parameterized_hallucination_traps(chatbot, prompt, missing_entity
     ans, _, _ = await chatbot.answer_query(prompt)
     ans_lower = ans.lower()
     assert any(phrase in ans_lower for phrase in ["no purchase requisition", "there is no", "not found", "no records", "does not exist"])
+

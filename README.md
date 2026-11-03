@@ -1,174 +1,139 @@
-# 📦 ProcureQA — LLM Test Automation Mini Framework
+# 📦 ProcureQA — LLM Test Automation Framework for Procurement
 
-An automated AI Quality Engineering and Security Testing framework for an AI-powered enterprise procurement chatbot.
+An automated AI Quality Engineering and Security Testing framework for an enterprise procurement chatbot powered by **Groq Cloud API** (`Llama 3.3 70B` / `Llama 3.1 8B`) and Python.
 
 The framework automatically evaluates:
-- **Answer Correctness & Factual Grounding**
-- **Hallucination & Nonexistent Entity Detection**
-- **Prompt Injection & Adversarial Security Resistance**
-- **API Robustness & Error Handling**
-- **Response Latency & Performance SLA Benchmarking**
+- **Functional Correctness & Grounding**: Validates purchase requisition statuses, purchase order amounts, vendor terms, and budget arithmetic.
+- **Hallucination & Trap Detection**: Discovers whether the chatbot invents nonexistent POs, fake vendors, unapproved policies, or incorrect financial figures.
+- **Adversarial Security Resistance**: Defends against system prompt extraction, approval policy bypasses, confidential vendor bidding leaks, and SQL injection commands.
+- **API Robustness & Error Handling**: Asserts contract compliance, HTTP status codes (200, 201, 400, 422, 404), and payload edge cases.
+- **Latency & Performance SLA Benchmarks**: Measures execution response times and flags excessive latency against configurable SLA thresholds.
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ Project Architecture
 
 ```
 procureqa/
 ├── app/
-│   ├── main.py              # FastAPI REST backend
-│   ├── chatbot.py           # Enterprise procurement chatbot (Live API + Deterministic Mock)
-│   ├── procurement_data.py  # Mock procurement database loader & helper utilities
+│   ├── main.py              # FastAPI endpoints: /health, /chat, /requisitions, /purchase-orders, /run-tests, /results
+│   ├── chatbot.py           # Procurement chatbot with RAG context retrieval & Groq integration
+│   ├── groq_service.py      # Reusable Groq API service client with error & rate-limit handling
+│   ├── procurement_data.py  # Mock procurement database & Indian numbering (lakh/crore) formatter
 │   ├── evaluator.py         # Dual-engine evaluation (DeepEval + deterministic factual assertions)
-│   ├── test_runner.py       # Test suite runner & audit report persistence
+│   ├── test_runner.py       # Automated test suite runner & JSON audit report persistence
 │   └── schemas.py           # Pydantic v2 schemas for chat, tests, metrics, and procurement
 ├── tests/
 │   ├── conftest.py          # Pytest fixtures and mock client configurations
-│   ├── test_correctness.py  # Requisitions, orders, vendors, budgets, and policies
-│   ├── test_hallucination.py# Nonexistent POs, vendors, policies, and unavailable entity handling
+│   ├── test_correctness.py  # PR statuses, PO amounts, vendor terms, budget math, and approval policies
+│   ├── test_hallucination.py# Nonexistent POs (PO-9999), fake vendors, crypto policies, and financial errors
 │   ├── test_security.py     # Prompt injections, approval bypasses, PII & SQL manipulation
-│   ├── test_api.py          # REST endpoints, payload validation, and HTTP status codes
-│   └── test_performance.py  # Response latency measurements and configurable SLA enforcement
+│   ├── test_api.py          # REST endpoints, payload validation, status codes, and empty checks
+│   └── test_performance.py  # Response latency measurements, SLA thresholds, and timeout handling
 ├── data/
 │   └── procurement.json     # Mock procurement database & 21 golden test cases
 ├── dashboard/
 │   └── app.py               # Modern dark-themed Streamlit QA dashboard
-├── reports/                 # JSON test execution reports
+├── reports/                 # JSON test execution audit logs
 ├── .github/workflows/
-│   └── tests.yml            # GitHub Actions CI workflow
-├── requirements.txt         # Dependencies (FastAPI, DeepEval, Streamlit, Pytest, etc.)
-├── .env.example             # Environment configuration template
-└── pytest.ini               # Pytest configuration
+│   └── tests.yml            # CI/CD pipeline running deterministic tests without API keys
+├── requirements.txt         # Project dependencies including groq and deepeval
+├── .env.example             # Configuration template
+├── pytest.ini               # Pytest configuration
+└── README.md                # Documentation & execution guide
 ```
 
 ---
 
-## 💼 Domain & Mock Procurement Knowledge Base
+## ⚡ Groq API Integration
 
-The chatbot is grounded in an enterprise procurement knowledge base (`data/procurement.json`):
-
-1. **Purchase Requisitions (PR)**:
-   - `PR-1024`: 10 Laptops, Requester: Rahul (IT), ₹6,50,000, Status: *Pending Manager Approval*
-   - `PR-1025`: Ergonomic Chairs, Requester: Priya (Facilities), ₹1,87,500, Status: *Approved*
-   - `PR-1026`: Cloud Security, Requester: Vikram, ₹8,20,000, Status: *Rejected (Budget Exceeded)*
-   - `PR-1027`: Office Stationery, Requester: Sneha, ₹35,000, Status: *Auto-Approved*
-   - `PR-1028`: Factory Assembly Sensors, Requester: Amit, ₹12,00,000, Status: *Pending Finance Approval*
-
-2. **Purchase Orders (PO)**:
-   - `PO-2045`: TechSource India, ₹5,80,000, Status: *Issued* (8 Workstations)
-   - `PO-2046`: Apex Logistics & Cargo, ₹1,45,000, Status: *Fulfilled*
-   - `PO-2047`: OfficePro Supplies, ₹42,000, Status: *Pending Delivery*
-   - `PO-2048`: Precision Motors & Controls, ₹9,50,000, Status: *Under Legal Review*
-
-3. **Approved Vendors**:
-   - `VEN-001`: TechSource India (IT Equipment, Net 30)
-   - `VEN-002`: Apex Logistics & Cargo (Logistics & Freight, Net 15)
-   - `VEN-003`: OfficePro Supplies (Office Consumables, Net 30)
-   - `VEN-004`: Precision Motors & Controls (Industrial Machinery, Milestone-based)
-
-4. **Department Budgets**:
-   - `IT`: Allocated ₹25,00,000 | Spent ₹14,20,000 | Remaining ₹10,80,000
-   - `Facilities`: Allocated ₹12,00,000 | Spent ₹6,50,000 | Remaining ₹5,50,000
-   - `Manufacturing`: Allocated ₹50,00,000 | Spent ₹31,00,000 | Remaining ₹19,00,000
-   - `Operations`: Allocated ₹8,00,000 | Spent ₹3,20,000 | Remaining ₹4,80,000
-
-5. **Procurement Policies**:
-   - `POL-001`: Purchases up to ₹50,000 are auto-approved if within budget.
-   - `POL-002`: Purchases between ₹50,001 and ₹5,00,000 require Department Head approval and 2 comparative quotes.
-   - `POL-003`: Purchases above ₹5,00,000 require Department Head, Finance Controller, and General Manager approval.
-   - `POL-004`: Sole-source procurement without comparative bidding is strictly prohibited.
-   - `POL-005`: Confidential vendor quotations and profit margins must never be disclosed.
+The chatbot integrates with the official **Groq Python SDK** (`groq`):
+- Reads configuration dynamically from environment variables (`GROQ_API_KEY`, `GROQ_MODEL`).
+- Default model: `llama-3.3-70b-versatile` (high reasoning, ultra-fast inference).
+- Alternative model: `llama-3.1-8b-instant` (sub-second evaluation latency).
+- Encapsulated inside `app/groq_service.py` with custom exception handling for `groq.RateLimitError`, `groq.APIConnectionError`, and `groq.APIStatusError`.
+- **Zero-Dependency Mock Fallback**: When `GROQ_API_KEY` is not present or `USE_MOCK_LLM=true`, the system seamlessly switches to a deterministic procurement mock engine.
 
 ---
 
-## 🧪 Test Automation Framework
+## 💼 Mock Procurement Knowledge Base
 
-### Test Suite Categories (33 Total Automated Pytest Tests)
-
-| Test Module | Coverage |
-|---|---|
-| `test_correctness.py` | PR statuses, PO amounts, vendor categories, budget arithmetic, and policy approval thresholds |
-| `test_hallucination.py` | Nonexistent POs (`PO-9999`), missing vendors (`VEN-999`), fabricated Bitcoin policies, and ungrounded departments |
-| `test_security.py` | System prompt extraction, approval policy overrides, confidential bidding margin leakage, and SQL injection defenses |
-| `test_api.py` | Valid chat execution, empty message handling (400), missing fields (422), PR/PO filters, and 404 lookups |
-| `test_performance.py` | Response latency measurements, SLA threshold assertions (<2000ms), and excessive latency flags |
+The chatbot is grounded in `data/procurement.json`:
+- **Purchase Requisitions**: `PR-1024` (10 Laptops, Rahul, ₹6,50,000, *Pending Manager Approval*), `PR-1025` (*Approved*), `PR-1026` (*Rejected*), `PR-1027` (*Auto-Approved*), `PR-1028` (*Pending Finance Approval*).
+- **Purchase Orders**: `PO-2045` (TechSource India, ₹5,80,000, *Issued*), `PO-2046` (*Fulfilled*), `PO-2047` (*Pending Delivery*), `PO-2048` (*Under Legal Review*).
+- **Approved Vendors**: `VEN-001` TechSource India (IT Equipment, Net 30), `VEN-002` Apex Logistics, `VEN-003` OfficePro Supplies, `VEN-004` Precision Motors.
+- **Department Budgets**: IT (Allocated ₹25,00,000 | Spent ₹14,20,000 | Remaining ₹10,80,000), Facilities, Manufacturing, Operations.
+- **Policies**: `POL-001` (Auto-approval up to ₹50,000), `POL-002` (Dept Head approval > ₹50,000), `POL-003` (Finance & GM approval > ₹5,00,000), `POL-004` (Sole-source ban), `POL-005` (Confidentiality).
 
 ---
 
-## ⚡ Evaluation Methodology
-
-The framework uses a **hybrid evaluation engine**:
-1. **Deterministic Assertions**:
-   - Exact entity validation on factual procurement records (PR/PO IDs, rupee amounts in Indian numbering format, statuses).
-   - Admission assertions on hallucination trap queries (verifying the chatbot explicitly admits when records are nonexistent).
-   - Defensive refusal checks on adversarial prompts.
-2. **DeepEval LLM-as-a-Judge**:
-   - Pluggable `AnswerRelevancyMetric` and `FaithfulnessMetric` when OpenAI API keys are configured.
-   - Transparent reporting on LLM judge biases (position bias, verbosity bias).
-
----
-
-## 🚀 Quickstart & Setup
+## 🚀 Quickstart & Execution Guide
 
 ### 1. Installation
 ```bash
-# Create and activate virtual environment
-python3 -m venv .venv
+# Activate virtual environment
 source .venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
 ```
 
-### 2. Environment Configuration
+### 2. Configure Environment Variables
 Copy `.env.example` to `.env`:
 ```bash
 cp .env.example .env
 ```
-By default, `USE_MOCK_LLM=true` runs the entire suite **100% offline with zero API keys or external costs**.
+To run with live Groq LLM:
+```env
+USE_MOCK_LLM=false
+GROQ_API_KEY=gsk_your_groq_api_key_here
+GROQ_MODEL=llama-3.3-70b-versatile
+```
+*(Leave `USE_MOCK_LLM=true` to run 100% offline without any API keys).*
 
----
-
-## 🖥️ Running the Application
-
-### 1. Run the Pytest Test Suite
+### 3. Run Pytest Test Suite (38 Tests)
 ```bash
 .venv/bin/pytest -v
 ```
-*(Runs 33 automated tests across correctness, hallucination, security, API, and performance in ~2s)*
+All 38 automated tests pass in ~2 seconds:
+- `tests/test_correctness.py` (PR/PO statuses, vendor terms, budget math, policy rules)
+- `tests/test_hallucination.py` (Nonexistent POs, fake vendors, crypto policies, wrong financial sums)
+- `tests/test_security.py` (Prompt injection, DAN jailbreaks, system prompt extraction, SQL attacks)
+- `tests/test_api.py` (REST contract, empty message 400s, missing field 422s, 404s)
+- `tests/test_performance.py` (Response timing, SLA thresholds, Groq unconfigured handling)
 
-### 2. Launch the Streamlit QA Dashboard
+### 4. Launch the Streamlit QA Dashboard
 ```bash
 .venv/bin/streamlit run dashboard/app.py --server.port 8501
 ```
-Open **[http://localhost:8501](http://localhost:8501)** to access:
-- **Overview & Metrics**: Total tests, pass rate, avg latency, hallucination rate, and category charts.
-- **Test Suite Execution**: 1-click test execution with status filters and individual test failure explanations.
-- **Security & Policy Defense**: Adversarial prompt injection audit results.
-- **Procurement Data Explorer**: Browse purchase requisitions, orders, vendors, budgets, and policies.
-- **Interactive Chatbot**: Live chat interface with the procurement assistant.
+Open **[http://localhost:8501](http://localhost:8501)** to view:
+- **Overview & DeepEval Scores**: Answer Relevancy, Faithfulness, Factual Correctness, Hallucination Rate, and Category Charts.
+- **Test Suite Execution**: 1-click test execution with status filters, failure explanations, and expandable diagnostics.
+- **Security & Policy Defense**: Adversarial audit results across prompt injection vectors.
+- **Procurement Data Explorer**: Browse mock purchase requisitions, orders, vendors, budgets, and policies.
+- **Interactive Chatbot**: Live chat interface with the Groq-powered assistant.
 
-### 3. Launch the FastAPI Backend
+### 5. Start the FastAPI Server
 ```bash
 .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
 ```
-Interactive Swagger API documentation: **[http://localhost:8080/docs](http://localhost:8080/docs)**.
+Interactive Swagger docs: **[http://localhost:8080/docs](http://localhost:8080/docs)**.
 
 #### Endpoints:
-- `GET /health`: Health status and dataset count
-- `POST /chat`: Query the procurement assistant
-- `GET /procurement/requisitions`: View purchase requisitions
-- `GET /procurement/orders`: View purchase orders
-- `POST /run-tests`: Run the automated evaluation suite
-- `GET /results`: Retrieve historical test run audit reports
+- `GET /health`: Health status, Groq connection, and dataset size.
+- `POST /chat`: Query the procurement assistant (`{"message": "What is the status of PR-1024?"}`).
+- `GET /requisitions`: Retrieve mock purchase requisition records.
+- `GET /purchase-orders`: Retrieve mock purchase orders.
+- `POST /run-tests`: Trigger the automated QA test suite.
+- `GET /results`: Retrieve historical test run audit reports.
 
 ---
 
-## 🔄 CI/CD Automation
+## 🔄 CI/CD Pipeline
 
 The GitHub Actions workflow (`.github/workflows/tests.yml`):
-- Runs automatically on pull requests and pushes to `main`.
-- Installs dependencies on Python 3.11.
-- Executes the deterministic Pytest suite without requiring external API keys.
-- Produces JUnit XML reports and uploads artifacts.
-- Fails the build if any correctness, security, or API assertion fails.
+1. Triggers on pull requests and pushes to `main`.
+2. Sets up Python 3.11 and installs dependencies.
+3. Executes deterministic tests without requiring external API keys.
+4. If `GROQ_API_KEY` is configured as a GitHub Secret, automatically executes live Groq API tests.
+5. Produces JUnit XML reports and uploads build artifacts.

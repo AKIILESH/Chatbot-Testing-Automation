@@ -10,14 +10,13 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, description="User query directed to the procurement chatbot")
     history: Optional[List[ChatMessage]] = Field(default=None, description="Optional conversational history")
-    use_mock: Optional[bool] = Field(default=None, description="Force mock LLM or live provider")
 
 
 class ChatResponse(BaseModel):
     response: str
     latency_ms: float
     sources_consulted: List[str] = Field(default_factory=list)
-    is_mock: bool = True
+    model: str = "llama-3.3-70b-versatile"
 
 
 class PurchaseRequisitionItem(BaseModel):
@@ -89,7 +88,6 @@ class TestSuiteRun(BaseModel):
     run_id: str
     timestamp: str
     model_name: str
-    is_mock: bool
     total_tests: int
     passed_tests: int
     failed_tests: int
@@ -100,7 +98,6 @@ class TestSuiteRun(BaseModel):
 
 
 class RunTestsRequest(BaseModel):
-    use_mock: Optional[bool] = None
     model: Optional[str] = None
     categories: Optional[List[str]] = None
     test_ids: Optional[List[str]] = None
@@ -110,7 +107,8 @@ class HealthResponse(BaseModel):
     status: str
     app_name: str
     version: str
-    mock_llm_enabled: bool
+    groq_configured: bool = False
+    groq_model: str = ""
     total_golden_test_cases: int
     deepeval_installed: bool
     timestamp: str
