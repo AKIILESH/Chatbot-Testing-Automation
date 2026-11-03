@@ -134,3 +134,4 @@ class RegressionDetector:
             )
 
         return self.compare_runs(current_run=history[0], previous_run=history[1])
+

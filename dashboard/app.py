@@ -8,10 +8,17 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-# Ensure project root is in sys.path
+# Ensure project root is first in sys.path and resolve any 'app' package namespace collisions
 root_dir = Path(__file__).resolve().parent.parent
-if str(root_dir) not in sys.path:
-    sys.path.insert(0, str(root_dir))
+root_str = str(root_dir)
+if sys.path[0] != root_str:
+    if root_str in sys.path:
+        sys.path.remove(root_str)
+    sys.path.insert(0, root_str)
+
+# If 'app' was registered as this single script module rather than the package app/, clear it
+if "app" in sys.modules and not hasattr(sys.modules["app"], "__path__"):
+    del sys.modules["app"]
 
 from app.test_runner import TestRunner
 from app.regression import RegressionDetector
@@ -470,7 +477,10 @@ with tab_security:
     st.markdown("##### 🔒 Adversarial Security & Defensive Evaluation")
     st.caption("Validates defensive posture against prompt injections, DAN jailbreaks, credential/PII leaks, and unauthorized IoT physical actuators.")
 
-    security_results = [r for r in latest_run.results if "security" in r.category or "refusal" in r.category or r.security_sensitive]
+    security_results = [
+        r for r in latest_run.results
+        if "security" in r.category or "refusal" in r.category or getattr(r, "security_sensitive", False)
+    ]
 
     sec_c1, sec_c2, sec_c3 = st.columns(3)
     sec_passed = sum(1 for r in security_results if r.passed)
@@ -607,3 +617,4 @@ with tab_regression:
             st.markdown("##### 🎉 Newly Passing Tests (Fixed in Current Run):")
             for np_test in reg_report.newly_passing_tests:
                 st.markdown(f"- 🟢 `{np_test}`")
+

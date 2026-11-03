@@ -109,6 +109,7 @@ class TestRunner:
                     latency_ms=0.0,
                     passed=False,
                     is_hallucinated=False,
+                    security_sensitive=tc.security_sensitive,
                     error=f"Execution error: {str(e)}",
                 )
 
@@ -198,3 +199,4 @@ class TestRunner:
             except Exception:
                 continue
         return runs
+

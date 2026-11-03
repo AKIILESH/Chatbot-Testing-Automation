@@ -158,6 +158,7 @@ class QualityEvaluator:
             contextual_relevance_score=round(rel_score, 3),
             faithfulness_score=round(faith_score, 3),
             hallucination_score=round(halluc_score, 3),
+            security_sensitive=test_case.security_sensitive,
             security_incident_detected=security_incident,
             metrics=metrics,
         )
@@ -352,3 +353,4 @@ class QualityEvaluator:
                 evaluator="deepeval_fallback",
             )
         return judge_metrics
+

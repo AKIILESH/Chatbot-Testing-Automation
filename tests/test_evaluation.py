@@ -129,3 +129,4 @@ def test_parameterized_evaluation_thresholds(evaluator, category, expected_min_s
     )
     res = evaluator.evaluate_test_case(tc, tc.expected_answer, latency_ms=100.0)
     assert res.correctness_score >= expected_min_score
+

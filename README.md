@@ -109,9 +109,9 @@ Open your browser at `http://localhost:8501`.
 
 ### Option B: Launch the FastAPI Backend
 ```bash
-.venv/bin/uvicorn app.main:app --reload --port 8000
+.venv/bin/uvicorn app.main:app --reload --port 8080
 ```
-Interactive Swagger / OpenAPI docs are available at: `http://localhost:8000/docs`.
+Interactive Swagger / OpenAPI docs are available at: `http://localhost:8080/docs`.
 
 #### Key Endpoints:
 - `GET /health`: API status, version, evaluator status, and total golden test cases.
@@ -189,3 +189,4 @@ The `.github/workflows/tests.yml` pipeline automates continuous integration:
 ## 🎯 Author
 **Candidate for AI Quality Engineer**  
 Atomberg Technologies
+

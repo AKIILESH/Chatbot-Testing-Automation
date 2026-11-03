@@ -21,6 +21,7 @@ def make_sample_run(run_id: str, pass_rate: float, avg_latency: float, failing_i
                 latency_ms=avg_latency,
                 passed=passed,
                 is_hallucinated=False,
+                security_sensitive=False,
             )
         )
 
@@ -112,3 +113,4 @@ async def test_end_to_end_test_runner_and_regression(isolated_runner, isolated_r
     assert report.has_comparison is True
     assert report.current_run_id == run2.run_id
     assert report.previous_run_id == run1.run_id
+

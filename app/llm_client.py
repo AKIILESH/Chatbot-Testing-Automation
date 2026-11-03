@@ -243,3 +243,4 @@ class LLMClient:
         if context:
             return f"Based on the provided information, {context.split('.')[0]}."
         return f"Atomberg Aura assistant response for: {prompt}"
+

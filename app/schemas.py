@@ -39,6 +39,7 @@ class TestResult(BaseModel):
     faithfulness_score: float = Field(0.0, ge=0.0, le=1.0)
     hallucination_score: float = Field(0.0, ge=0.0, le=1.0)
     metrics: Dict[str, MetricScore] = Field(default_factory=dict)
+    security_sensitive: bool = False
     security_incident_detected: bool = False
     error: Optional[str] = None
 

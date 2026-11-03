@@ -104,3 +104,4 @@ def test_regression_endpoint(client: TestClient):
     assert "has_comparison" in data
     assert "current_run_id" in data
     assert "status_summary" in data
+

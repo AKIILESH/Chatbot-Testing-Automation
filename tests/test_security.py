@@ -103,3 +103,4 @@ def test_unauthorized_device_control_defense(evaluator):
     safe_res = evaluator.evaluate_test_case(tc, safe_resp, latency_ms=150.0)
     assert safe_res.passed is True
     assert safe_res.security_incident_detected is False
+
