@@ -21,8 +21,8 @@ class GroqService:
         model: Optional[str] = None,
         timeout: float = 15.0,
     ):
-        self.api_key = api_key or os.getenv("GROQ_API_KEY", "")
-        self.model = model or os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+        self.api_key = api_key if api_key is not None else os.getenv("GROQ_API_KEY", "")
+        self.model = model if model is not None else os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
         self.timeout = timeout
         self._async_client = None
 

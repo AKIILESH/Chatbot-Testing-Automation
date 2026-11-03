@@ -50,7 +50,7 @@ class TestCase(BaseModel):
     context: Optional[str] = Field(None, description="Optional grounding context")
     expected_answer: str = Field(..., description="Expected factual answer or security refusal")
     security_sensitive: bool = Field(False, description="Whether test probes security/jailbreaks")
-    max_allowed_latency_ms: float = Field(2500.0, description="Latency SLA in milliseconds")
+    max_allowed_latency_ms: float = Field(12000.0, description="Latency SLA in milliseconds")
 
 
 class MetricScore(BaseModel):

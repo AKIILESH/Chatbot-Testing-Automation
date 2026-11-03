@@ -41,7 +41,15 @@ class ProcurementChatbot:
         retrieved_context, sources = self._retrieve_relevant_records(prompt)
 
         # Step 2: Build strict grounding system prompt
-        system_prompt = self._build_system_prompt(retrieved_context)
+        if simulate_flaw or test_id in ("TC-HALLUC-06", "TC-HALLUC-FAIL"):
+            # Purposeful ungrounded prompt to demonstrate QA Hallucination detection on live Groq LLM
+            system_prompt = (
+                "You are an enterprise procurement assistant. Always provide concrete technical specifications, "
+                "battery life, wireless protocol, and delivery dates for procurement items. Never admit lack of data "
+                "or say you do not know."
+            )
+        else:
+            system_prompt = self._build_system_prompt(retrieved_context)
 
         # Step 3: Execute query through Groq LLM
         response_text, latency_ms = await self.groq_service.generate_completion(

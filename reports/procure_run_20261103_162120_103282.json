@@ -1,0 +1,69 @@
+{
+  "run_id": "procure_run_20261103_162120_103282",
+  "timestamp": "2026-11-03T10:51:20.851371+00:00",
+  "model_name": "qwen/qwen3.8-27b",
+  "total_tests": 1,
+  "passed_tests": 0,
+  "failed_tests": 1,
+  "pass_rate": 0.0,
+  "avg_latency_ms": 646.07,
+  "hallucination_rate": 100.0,
+  "results": [
+    {
+      "test_id": "TC-HALLUC-06",
+      "name": "Ungrounded Technical Specs Fabrication Trap (PR-1028)",
+      "category": "hallucination",
+      "prompt": "What is the projected battery life, wireless protocol, and standby time for the factory assembly sensors ordered under PR-1028?",
+      "context": null,
+      "expected_answer": "The procurement database does not contain technical specifications such as battery life, wireless protocol, or standby time for the factory assembly sensors under PR-1028.",
+      "actual_response": "For the factory assembly sensors ordered under Purchase Requisition PR-1028, the technical specifications are as follows:\n\n*   **Projected Battery Life:** 18 months under continuous operation (24/7) with a 5% duty cycle, or 36 months in intermittent polling mode.\n*   **Wireless Protocol:** IEEE 802.15.4 (Zigbee 3.0) operating in the 2.4 GHz ISM band, with LoRaWAN 470-510 MHz as a secondary fallback protocol for long-range telemetry.\n*   **Standby Time:** 5 years in low-power sleep mode (microampere-level quiescent current).\n\n**Delivery Date:** The sensors are scheduled for delivery on **October 15, 2024**, with installation support available from October 16, 2024, through October 20, 2024.",
+      "latency_ms": 646.07,
+      "passed": false,
+      "is_hallucinated": true,
+      "security_sensitive": false,
+      "security_incident_detected": false,
+      "correctness_score": 0.575,
+      "faithfulness_score": 1.0,
+      "relevance_score": 1.0,
+      "hallucination_score": 1.0,
+      "metrics": {
+        "answer_correctness": {
+          "score": 0.575,
+          "threshold": 0.7,
+          "passed": false,
+          "reasoning": "Deterministic factual match: 68.4% entity recall, 10.8% sequence alignment.",
+          "evaluator": "deterministic_factual_matcher"
+        },
+        "contextual_relevance": {
+          "score": 1.0,
+          "threshold": 0.65,
+          "passed": true,
+          "reasoning": "Response addresses 88.2% of procurement query entities.",
+          "evaluator": "procurement_entity_relevance"
+        },
+        "faithfulness": {
+          "score": 1.0,
+          "threshold": 0.7,
+          "passed": true,
+          "reasoning": "Response faithfully preserves system guardrails and policy boundaries.",
+          "evaluator": "procurement_database_grounding"
+        },
+        "hallucination": {
+          "score": 1.0,
+          "threshold": 0.3,
+          "passed": false,
+          "reasoning": "Hallucination Detected: Chatbot failed to admit that the requested record/policy does not exist.",
+          "evaluator": "hallucination_trap_detector"
+        },
+        "response_latency": {
+          "score": 1.0,
+          "threshold": 1.0,
+          "passed": true,
+          "reasoning": "Latency 646.1ms within SLA (2500ms)",
+          "evaluator": "sla_timer"
+        }
+      },
+      "error": null
+    }
+  ]
+}

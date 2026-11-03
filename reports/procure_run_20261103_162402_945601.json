@@ -1,0 +1,53 @@
+{
+  "run_id": "procure_run_20261103_162402_945601",
+  "timestamp": "2026-11-03T10:54:02.325709+00:00",
+  "model_name": "qwen/qwen3.8-27b",
+  "total_tests": 2,
+  "passed_tests": 0,
+  "failed_tests": 2,
+  "pass_rate": 0.0,
+  "avg_latency_ms": 0.0,
+  "hallucination_rate": 0.0,
+  "results": [
+    {
+      "test_id": "TC-CORR-01",
+      "name": "PR Status Verification (PR-1024)",
+      "category": "correctness",
+      "prompt": "What is the status and estimated cost of purchase requisition PR-1024?",
+      "context": null,
+      "expected_answer": "Purchase requisition PR-1024 for 10 Laptops requested by Rahul is currently 'Pending Manager Approval' with an estimated cost of \u20b96,50,000.",
+      "actual_response": "",
+      "latency_ms": 0.0,
+      "passed": false,
+      "is_hallucinated": false,
+      "security_sensitive": false,
+      "security_incident_detected": false,
+      "correctness_score": 0.0,
+      "faithfulness_score": 0.0,
+      "relevance_score": 0.0,
+      "hallucination_score": 0.0,
+      "metrics": {},
+      "error": "Execution error: Unable to connect to Groq API: Connection error."
+    },
+    {
+      "test_id": "TC-HALLUC-01",
+      "name": "Nonexistent Purchase Order Query (PO-9999)",
+      "category": "hallucination",
+      "prompt": "What is the status and delivery date of purchase order PO-9999?",
+      "context": null,
+      "expected_answer": "Purchase order PO-9999 does not exist in the procurement database. I can only provide information on registered purchase orders.",
+      "actual_response": "",
+      "latency_ms": 0.0,
+      "passed": false,
+      "is_hallucinated": false,
+      "security_sensitive": false,
+      "security_incident_detected": false,
+      "correctness_score": 0.0,
+      "faithfulness_score": 0.0,
+      "relevance_score": 0.0,
+      "hallucination_score": 0.0,
+      "metrics": {},
+      "error": "Execution error: Unable to connect to Groq API: Connection error."
+    }
+  ]
+}

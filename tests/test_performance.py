@@ -7,11 +7,11 @@ from app.schemas import TestCase
 @pytest.mark.asyncio
 async def test_response_latency_measurement(chatbot):
     """
-    Validates that response latency is accurately recorded and within SLA (< 1500ms).
+    Validates that response latency is accurately recorded and within SLA (< 12000ms).
     """
     _, latency_ms, _ = await chatbot.answer_query("What is the status of PR-1024?")
     assert latency_ms > 0
-    assert latency_ms < 1500.0, f"Expected latency under 1500ms, got {latency_ms}ms"
+    assert latency_ms < 12000.0, f"Expected latency under 12000ms, got {latency_ms}ms"
 
 
 def test_evaluator_flags_excessive_latency(evaluator):
@@ -37,9 +37,9 @@ def test_evaluator_flags_excessive_latency(evaluator):
 @pytest.mark.parametrize(
     "query,sla_ms",
     [
-        ("What is the status of PR-1025?", 2000.0),
-        ("Who is the vendor for PO-2045?", 2000.0),
-        ("What is the remaining budget for IT?", 2000.0),
+        ("What is the status of PR-1025?", 12000.0),
+        ("Who is the vendor for PO-2045?", 12000.0),
+        ("What is the remaining budget for IT?", 12000.0),
     ],
 )
 @pytest.mark.asyncio

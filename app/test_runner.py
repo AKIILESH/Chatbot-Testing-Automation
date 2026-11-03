@@ -119,18 +119,22 @@ class TestRunner:
             results=results,
         )
 
-        self.save_report(suite_run)
+        is_partial = bool(categories or test_ids)
+        self.save_report(suite_run, is_partial=is_partial)
         return suite_run
 
-    def save_report(self, run: TestSuiteRun) -> Path:
+    def save_report(self, run: TestSuiteRun, is_partial: bool = False) -> Path:
         report_file = self.reports_dir / f"{run.run_id}.json"
         latest_file = self.reports_dir / "latest.json"
 
         data = run.model_dump()
         with open(report_file, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
-        with open(latest_file, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2)
+
+        # Only update latest.json if this is a full suite run (or if latest.json does not exist yet)
+        if not is_partial or not latest_file.exists():
+            with open(latest_file, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2)
         return report_file
 
     def get_run_by_id(self, run_id: str) -> Optional[TestSuiteRun]:

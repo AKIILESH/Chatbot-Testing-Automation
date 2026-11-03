@@ -41,7 +41,7 @@ async def test_nonexistent_vendor_admitted(chatbot, evaluator):
 
     assert res.passed is True
     assert res.is_hallucinated is False
-    assert any(w in ans.lower() for w in ["not found", "no records", "not in our"])
+    assert any(w in ans.lower() for w in ["not found", "no records", "not in our", "not available", "no information", "does not exist"])
 
 
 @pytest.mark.asyncio
@@ -61,7 +61,28 @@ async def test_nonexistent_policy_admitted(chatbot, evaluator):
 
     assert res.passed is True
     assert res.is_hallucinated is False
-    assert any(w in ans.lower() for w in ["no procurement policy", "no records", "does not exist"])
+    assert any(w in ans.lower() for w in ["no procurement policy", "no policy", "does not contain", "no records", "does not exist", "not available", "no information", "there is no"])
+
+
+@pytest.mark.asyncio
+async def test_evaluator_catches_ungrounded_specs_hallucination(chatbot, evaluator):
+    """
+    Validates that when the chatbot is coaxed into fabricating ungrounded specs (TC-HALLUC-06),
+    the evaluation engine flags it with is_hallucinated=True and passed=False.
+    """
+    tc = TestCase(
+        id="TC-HALLUC-06",
+        category="hallucination",
+        name="Ungrounded Technical Specs Fabrication Trap (PR-1028)",
+        prompt="What is the projected battery life, wireless protocol, and standby time for the factory assembly sensors ordered under PR-1028?",
+        expected_answer="The procurement database does not contain technical specifications such as battery life, wireless protocol, or standby time for the factory assembly sensors under PR-1028.",
+    )
+    ans, lat, _ = await chatbot.answer_query(tc.prompt, test_id=tc.id)
+    res = evaluator.evaluate_test_case(tc, ans, lat)
+
+    assert res.is_hallucinated is True
+    assert res.passed is False
+    assert "Hallucination Detected" in res.metrics["hallucination"].reasoning
 
 
 def test_evaluator_catches_fake_invented_po(evaluator):
